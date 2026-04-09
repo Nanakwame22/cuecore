@@ -1,0 +1,24 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+out/
+
+# Environment variables — never commit these
+.env
+.env.local
+.env.*.local
+
+# Vercel
+.vercel/
+
+# Editor
+.DS_Store
+*.suo
+.vscode/
+.idea/
+
+# Logs
+*.log
+npm-debug.log*
