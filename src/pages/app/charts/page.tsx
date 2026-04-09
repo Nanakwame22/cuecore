@@ -1,68 +1,64 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import AppLayout from '@/pages/app/components/AppLayout';
-import {
-  watchlistAssets,
-  chartIndicators,
-  defaultIndicators,
-  dashboardCues,
-} from '@/mocks/appData';
+import { watchlistAssets, dashboardCues } from '@/mocks/appData';
 import CandlestickChart from './CandlestickChart';
 import { usePlan } from '@/hooks/usePlan';
 import UpgradeModal from '@/components/feature/UpgradeModal';
-import { useLiveChart } from './useLiveChart';
+import { useRealChart } from './useRealChart';
+import { useRealSignals } from '@/hooks/useRealSignals';
 
-const TIMEFRAMES = ['S5', 'S10', 'S30', '1m', '2m', '3m', '5m', '10m', '15m', '30m', '1H', '4H', 'D1'] as const;
+const TIMEFRAMES = ['1m', '5m', '15m', '30m', '1H', '4H', 'D1'] as const;
 type TF = typeof TIMEFRAMES[number];
 
 export type ChartType = 'candles' | 'line' | 'bars' | 'heikin_ashi';
 
-const tfToLegacy: Record<TF, string> = {
-  'S5': '1H', 'S10': '1H', 'S30': '1H',
-  '1m': '1H', '2m': '1H', '3m': '1H',
-  '5m': '1H', '10m': '4H', '15m': '4H',
-  '30m': '4H', '1H': '4H', '4H': '4H', 'D1': '1D',
-};
-
 const CHART_TYPES: { key: ChartType; label: string; icon: string }[] = [
-  { key: 'line', label: 'Line', icon: 'ri-line-chart-line' },
-  { key: 'candles', label: 'Candles', icon: 'ri-bar-chart-box-line' },
-  { key: 'bars', label: 'Bars', icon: 'ri-bar-chart-line' },
-  { key: 'heikin_ashi', label: 'Heikin Ashi', icon: 'ri-bar-chart-grouped-line' },
+  { key: 'candles',     label: 'Candles',   icon: 'ri-bar-chart-box-line' },
+  { key: 'line',        label: 'Line',      icon: 'ri-line-chart-line' },
+  { key: 'bars',        label: 'Bars',      icon: 'ri-bar-chart-line' },
+  { key: 'heikin_ashi', label: 'H. Ashi',   icon: 'ri-bar-chart-grouped-line' },
 ];
 
-const dirColor = (d: string) => {
-  if (d === 'BUY') return { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200', dot: 'bg-green-500' };
-  if (d === 'SELL') return { bg: 'bg-red-50', text: 'text-red-600', border: 'border-red-200', dot: 'bg-red-500' };
-  return { bg: 'bg-slate-100', text: 'text-slate-500', border: 'border-slate-200', dot: 'bg-slate-400' };
+const formatPrice = (p: number) =>
+  p >= 1000 ? p.toLocaleString(undefined, { maximumFractionDigits: 2 })
+  : p >= 10  ? p.toFixed(2)
+  : p.toFixed(5);
+
+const formatChange = (c: number) => `${c >= 0 ? '+' : ''}${c.toFixed(2)}%`;
+
+const sectorColor = (s: string) => {
+  switch (s) {
+    case 'Crypto':    return 'text-[#F59E0B]';
+    case 'Equity':    return 'text-[#60A5FA]';
+    case 'Forex':     return 'text-[#A78BFA]';
+    case 'Commodity': return 'text-[#34D399]';
+    default:          return 'text-slate-400';
+  }
 };
 
-const formatPrice = (p: number) =>
-  p >= 1000 ? p.toLocaleString(undefined, { maximumFractionDigits: 2 }) : p >= 10 ? p.toFixed(2) : p.toFixed(4);
-
 const ChartsPage = () => {
-  const [selectedId, setSelectedId] = useState(watchlistAssets[0].id);
-  const [timeframe, setTimeframe] = useState<TF>('1H');
-  const [chartType, setChartType] = useState<ChartType>('candles');
-  const [showVWAP, setShowVWAP] = useState(true);
-  const [showBB, setShowBB] = useState(false);
-  const [showVolume, setShowVolume] = useState(true);
-  const [showRSI, setShowRSI] = useState(true);
-  const [showMACD, setShowMACD] = useState(true);
-  const [showMA, setShowMA] = useState(false);
-  const [showSignalPanel, setShowSignalPanel] = useState(true);
+  const [selectedId,       setSelectedId]       = useState(watchlistAssets[0].id);
+  const [timeframe,        setTimeframe]        = useState<TF>('4H');
+  const [chartType,        setChartType]        = useState<ChartType>('candles');
+  const [showVWAP,         setShowVWAP]         = useState(false);
+  const [showBB,           setShowBB]           = useState(false);
+  const [showVolume,       setShowVolume]       = useState(true);
+  const [showRSI,          setShowRSI]          = useState(true);
+  const [showMACD,         setShowMACD]         = useState(true);
+  const [showMA,           setShowMA]           = useState(false);
+  const [showSignalPanel,  setShowSignalPanel]  = useState(true);
   const [showChartOptions, setShowChartOptions] = useState(false);
   const [enableAutoscroll, setEnableAutoscroll] = useState(true);
-  const [enableGridSnap, setEnableGridSnap] = useState(true);
-  const [upgradeModal, setUpgradeModal] = useState<{ open: boolean; feature: string }>({ open: false, feature: '' });
-  const [searchQuery, setSearchQuery] = useState('');
-  const [activeTab, setActiveTab] = useState<'signal' | 'levels'>('signal');
+  const [enableGridSnap,   setEnableGridSnap]   = useState(true);
+  const [searchQuery,      setSearchQuery]      = useState('');
+  const [activeTab,        setActiveTab]        = useState<'signal' | 'levels'>('signal');
+  const [upgradeModal,     setUpgradeModal]     = useState<{ open: boolean; feature: string }>({ open: false, feature: '' });
   const chartOptionsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (chartOptionsRef.current && !chartOptionsRef.current.contains(e.target as Node)) {
+      if (chartOptionsRef.current && !chartOptionsRef.current.contains(e.target as Node))
         setShowChartOptions(false);
-      }
     };
     if (showChartOptions) document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
@@ -70,27 +66,32 @@ const ChartsPage = () => {
 
   const { isPremium } = usePlan();
 
+  // Real signals from the engine — merged with mock cues as fallback
+  const { signals: realSignals } = useRealSignals();
+
   const selectedAsset = watchlistAssets.find(a => a.id === selectedId) ?? watchlistAssets[0];
 
-  const { bars, liveBar, livePrice, barProgress } = useLiveChart(
-    selectedAsset.id,
+  // Fetch real OHLCV + indicators
+  const { bars, liveBar, livePrice, loading, error, indicators } = useRealChart(
+    selectedAsset.symbol,
     timeframe,
-    selectedAsset.price,
   );
 
-  const lastClose = livePrice > 0 ? livePrice : (bars.length ? bars[bars.length - 1].close : selectedAsset.price);
+  const lastPrice = livePrice > 0 ? livePrice : selectedAsset.price;
+  const priceChange = selectedAsset.change;
 
-  const indicators = useMemo(() => {
-    const assetMap = chartIndicators[selectedAsset.id];
-    const legacyTf = tfToLegacy[timeframe];
-    return assetMap ? (assetMap[legacyTf] ?? defaultIndicators(legacyTf)) : defaultIndicators(legacyTf);
-  }, [selectedAsset.id, timeframe]);
-
-  // Find matching cue signal for this asset
-  const matchedCue = useMemo(() =>
-    dashboardCues.find(c => c.asset === selectedAsset.symbol || c.asset.startsWith(selectedAsset.symbol.split('/')[0])),
-    [selectedAsset.symbol]
+  const filteredAssets = watchlistAssets.filter(a =>
+    a.symbol.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    a.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  // Find a matching signal (real first, then mock)
+  const matchedCue = useMemo(() => {
+    const sym = selectedAsset.symbol;
+    const real = realSignals.find(s => s.asset === sym);
+    if (real) return real;
+    return dashboardCues.find(c => c.asset === sym || c.asset.startsWith(sym.split('/')[0]));
+  }, [selectedAsset.symbol, realSignals]);
 
   const signal = matchedCue ? {
     direction: matchedCue.direction,
@@ -100,58 +101,76 @@ const ChartsPage = () => {
     riskReward: matchedCue.riskReward,
   } : null;
 
-  const rsiVal = indicators.rsi;
-  const rsiColor = rsiVal > 70 ? 'text-red-500' : rsiVal < 30 ? 'text-green-600' : 'text-indigo-500';
-  const macdPositive = indicators.macd.startsWith('+');
-
-  const filteredAssets = watchlistAssets.filter(a =>
-    a.symbol.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    a.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  const dc = dirColor(selectedAsset.direction);
-
-  // Compute risk/reward stats
-  const riskPct = matchedCue ? Math.abs((matchedCue.entry - matchedCue.stopLoss) / matchedCue.entry * 100) : null;
+  const riskPct   = matchedCue ? Math.abs((matchedCue.entry - matchedCue.stopLoss) / matchedCue.entry * 100) : null;
   const rewardPct = matchedCue ? Math.abs((matchedCue.target - matchedCue.entry) / matchedCue.entry * 100) : null;
 
-  return (
-    <AppLayout title="Charts" subtitle="Institutional-grade charting with Cue Engine overlay">
-      <div className="flex h-full overflow-hidden bg-white">
+  // Indicator display values
+  const rsiVal = indicators.rsi;
+  const rsiZone = rsiVal !== null
+    ? rsiVal > 70 ? { label: 'Overbought', color: 'text-[#FF4D4D]' }
+    : rsiVal < 30 ? { label: 'Oversold',   color: 'text-[#00D084]' }
+    : rsiVal >= 40 && rsiVal <= 65 ? { label: 'Buy Zone', color: 'text-[#F59E0B]' }
+    : { label: 'Neutral', color: 'text-slate-400' }
+    : null;
 
-        {/* ── Instrument List ── */}
-        <div className="w-52 flex-shrink-0 flex flex-col border-r border-slate-100 bg-white overflow-hidden">
-          <div className="px-3 py-3 border-b border-slate-100">
+  const macdBullish = (indicators.macdHistogram ?? 0) > 0;
+  const emaCross    = indicators.ema9 !== null && indicators.ema21 !== null
+    ? indicators.ema9 > indicators.ema21 ? 'Bullish' : 'Bearish'
+    : null;
+
+  return (
+    <AppLayout title="Charts" subtitle="Institutional-grade charting with live OHLCV and Cue Engine overlay">
+      {/* Full dark surface */}
+      <div className="flex h-full overflow-hidden" style={{ background: '#080a0e' }}>
+
+        {/* ── Instrument Sidebar ─────────────────────────────────────────── */}
+        <div
+          className="w-52 flex-shrink-0 flex flex-col overflow-hidden border-r"
+          style={{ background: '#0d1420', borderColor: '#1e2d42' }}
+        >
+          {/* Search */}
+          <div className="px-3 py-3 border-b" style={{ borderColor: '#1e2d42' }}>
             <div className="relative">
-              <i className="ri-search-line absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs" />
+              <i className="ri-search-line absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500 text-xs" />
               <input
                 type="text"
-                placeholder="Search..."
+                placeholder="Search symbol…"
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                className="w-full pl-7 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-md text-slate-700 placeholder-slate-400 focus:outline-none focus:border-blue-300 focus:ring-1 focus:ring-blue-100"
+                className="w-full pl-7 pr-3 py-1.5 text-xs rounded-md text-slate-300 placeholder-slate-600 focus:outline-none focus:ring-1"
+                style={{ background: '#162030', border: '1px solid #1e2d42', '--tw-ring-color': '#F59E0B' } as React.CSSProperties}
               />
             </div>
           </div>
+
+          {/* Asset list */}
           <div className="flex-1 overflow-y-auto">
             {filteredAssets.map(asset => {
               const isActive = asset.id === selectedId;
-              const adc = dirColor(asset.direction);
+              const up = asset.change >= 0;
               return (
                 <button
                   key={asset.id}
                   onClick={() => setSelectedId(asset.id)}
-                  className={`w-full px-3 py-2.5 text-left cursor-pointer transition-all border-l-2 ${isActive ? 'bg-blue-50 border-blue-500' : 'bg-white border-transparent hover:bg-slate-50'}`}
+                  className="w-full px-3 py-2.5 text-left cursor-pointer transition-all border-l-2"
+                  style={{
+                    background: isActive ? 'rgba(245,158,11,0.07)' : 'transparent',
+                    borderLeftColor: isActive ? '#F59E0B' : 'transparent',
+                  }}
+                  onMouseEnter={e => { if (!isActive) (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.03)'; }}
+                  onMouseLeave={e => { if (!isActive) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
                 >
                   <div className="flex items-center justify-between">
-                    <span className={`text-xs font-mono font-700 ${isActive ? 'text-blue-700' : 'text-slate-700'}`}>{asset.symbol}</span>
-                    <span className={`text-xs font-mono font-600 ${asset.change >= 0 ? 'text-green-600' : 'text-red-500'}`}>
-                      {asset.change >= 0 ? '+' : ''}{asset.change}%
+                    <span className={`text-xs font-mono font-bold ${isActive ? 'text-[#F59E0B]' : 'text-slate-300'}`}>
+                      {asset.symbol}
+                    </span>
+                    <span className={`text-xs font-mono ${up ? 'text-[#00D084]' : 'text-[#FF4D4D]'}`}>
+                      {formatChange(asset.change)}
                     </span>
                   </div>
                   <div className="flex items-center justify-between mt-0.5">
-                    <span className="text-xs text-slate-400 truncate">{asset.name}</span>
-                    <span className={`text-xs font-mono font-600 ${adc.text}`}>{asset.direction}</span>
+                    <span className="text-xs text-slate-600 truncate">{asset.name}</span>
+                    <span className={`text-xs ${sectorColor(asset.sector)}`}>{asset.sector}</span>
                   </div>
                 </button>
               );
@@ -159,111 +178,118 @@ const ChartsPage = () => {
           </div>
         </div>
 
-        {/* ── Main Chart Area ── */}
+        {/* ── Main Chart Area ───────────────────────────────────────────── */}
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
 
-          {/* Toolbar */}
-          <div className="px-4 py-2.5 flex items-center gap-3 flex-shrink-0 border-b border-slate-100 bg-white flex-wrap">
+          {/* ── Toolbar ── */}
+          <div
+            className="px-4 py-2.5 flex items-center gap-3 flex-shrink-0 border-b flex-wrap"
+            style={{ background: '#0d1420', borderColor: '#1e2d42' }}
+          >
             {/* Asset info */}
             <div className="flex items-center gap-3">
               <div>
-                <span className="font-mono font-700 text-slate-800 text-sm">{selectedAsset.symbol}</span>
-                <span className="text-slate-400 text-xs ml-1.5 hidden sm:inline">{selectedAsset.name}</span>
+                <span className="font-mono font-bold text-white text-sm">{selectedAsset.symbol}</span>
+                <span className="text-slate-500 text-xs ml-1.5 hidden sm:inline">{selectedAsset.name}</span>
               </div>
-              <span className="text-base font-mono font-700 text-slate-800">
-                {formatPrice(lastClose)}
+              <span className="text-base font-mono font-bold text-white">
+                {loading ? '—' : formatPrice(lastPrice)}
               </span>
-              <span className={`text-xs font-mono font-600 ${selectedAsset.change >= 0 ? 'text-green-600' : 'text-red-500'}`}>
-                {selectedAsset.change >= 0 ? '+' : ''}{selectedAsset.change}%
+              <span className={`text-xs font-mono font-semibold ${priceChange >= 0 ? 'text-[#00D084]' : 'text-[#FF4D4D]'}`}>
+                {formatChange(priceChange)}
               </span>
-              <span className={`text-xs px-2 py-0.5 rounded-full font-mono font-600 border ${dc.bg} ${dc.text} ${dc.border}`}>
-                {selectedAsset.direction}
-              </span>
+              {/* Direction badge */}
+              {matchedCue && (
+                <span
+                  className="text-xs px-2 py-0.5 rounded-full font-mono font-bold border"
+                  style={
+                    matchedCue.direction === 'BUY'
+                      ? { color: '#00D084', borderColor: 'rgba(0,208,132,0.3)', background: 'rgba(0,208,132,0.1)' }
+                      : matchedCue.direction === 'SELL'
+                      ? { color: '#FF4D4D', borderColor: 'rgba(255,77,77,0.3)', background: 'rgba(255,77,77,0.1)' }
+                      : { color: '#F59E0B', borderColor: 'rgba(245,158,11,0.3)', background: 'rgba(245,158,11,0.1)' }
+                  }
+                >
+                  {matchedCue.direction}
+                </span>
+              )}
+              {loading && (
+                <span className="text-xs text-slate-500 flex items-center gap-1">
+                  <i className="ri-loader-4-line animate-spin" /> Loading…
+                </span>
+              )}
+              {error && (
+                <span className="text-xs text-[#FF4D4D] flex items-center gap-1">
+                  <i className="ri-wifi-off-line" /> API error — showing mock
+                </span>
+              )}
             </div>
 
             <div className="ml-auto flex items-center gap-2 flex-wrap">
-              {/* Chart type + options button */}
+
+              {/* Chart type + settings dropdown */}
               <div className="relative" ref={chartOptionsRef}>
                 <button
                   onClick={() => setShowChartOptions(v => !v)}
-                  className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-md cursor-pointer transition-all whitespace-nowrap font-mono font-600 border ${showChartOptions ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'}`}
+                  className="flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-md cursor-pointer transition-all font-mono font-semibold border"
+                  style={showChartOptions
+                    ? { background: '#F59E0B', color: '#080a0e', borderColor: '#F59E0B' }
+                    : { background: 'transparent', color: '#94a3b8', borderColor: '#1e2d42' }}
                 >
                   <i className={`${CHART_TYPES.find(c => c.key === chartType)?.icon ?? 'ri-bar-chart-box-line'} text-xs`} />
                   {CHART_TYPES.find(c => c.key === chartType)?.label}
-                  <i className={showChartOptions ? 'ri-arrow-up-s-line text-xs' : 'ri-arrow-down-s-line text-xs'} />
+                  <i className={`${showChartOptions ? 'ri-arrow-up-s-line' : 'ri-arrow-down-s-line'} text-xs`} />
                 </button>
 
-                {/* Chart Options Dropdown */}
                 {showChartOptions && (
-                  <div className="absolute top-full left-0 mt-1.5 z-50 w-80 bg-slate-900 rounded-xl border border-slate-700 overflow-hidden"
-                    style={{ boxShadow: '0 8px 32px rgba(0,0,0,0.35)' }}>
-
-                    {/* Chart Types */}
-                    <div className="p-4 border-b border-slate-700/60">
-                      <div className="text-xs font-600 text-slate-400 uppercase tracking-widest mb-3">Chart types</div>
+                  <div
+                    className="absolute top-full left-0 mt-2 z-50 w-80 rounded-xl border overflow-hidden"
+                    style={{ background: '#0d1420', borderColor: '#1e2d42', boxShadow: '0 16px 48px rgba(0,0,0,0.6)' }}
+                  >
+                    {/* Chart types */}
+                    <div className="p-4 border-b" style={{ borderColor: '#1e2d42' }}>
+                      <div className="text-xs font-semibold text-slate-500 uppercase tracking-widest mb-3">Chart type</div>
                       <div className="grid grid-cols-4 gap-2">
                         {CHART_TYPES.map(ct => (
                           <button
                             key={ct.key}
-                            onClick={() => { setChartType(ct.key); }}
-                            className={`flex flex-col items-center gap-1.5 py-3 px-2 rounded-lg cursor-pointer transition-all border ${
-                              chartType === ct.key
-                                ? 'bg-slate-700 border-slate-500 text-white'
-                                : 'bg-slate-800 border-slate-700 text-slate-400 hover:bg-slate-750 hover:text-slate-200 hover:border-slate-600'
-                            }`}
+                            onClick={() => setChartType(ct.key)}
+                            className="flex flex-col items-center gap-1.5 py-3 px-2 rounded-lg cursor-pointer transition-all border text-xs"
+                            style={chartType === ct.key
+                              ? { background: 'rgba(245,158,11,0.12)', borderColor: '#F59E0B', color: '#F59E0B' }
+                              : { background: '#162030', borderColor: '#1e2d42', color: '#64748b' }}
                           >
                             <i className={`${ct.icon} text-lg`} />
-                            <span className="text-xs font-500 leading-tight text-center">{ct.label}</span>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Time Frames */}
-                    <div className="p-4 border-b border-slate-700/60">
-                      <div className="text-xs font-600 text-slate-400 uppercase tracking-widest mb-3">Time frames</div>
-                      <div className="grid grid-cols-6 gap-1.5">
-                        {TIMEFRAMES.map(tf => (
-                          <button
-                            key={tf}
-                            onClick={() => setTimeframe(tf)}
-                            className={`py-1.5 text-xs font-mono font-600 rounded-md cursor-pointer transition-all whitespace-nowrap ${
-                              timeframe === tf
-                                ? 'bg-slate-600 text-white'
-                                : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-slate-200 border border-slate-700'
-                            }`}
-                          >
-                            {tf}
+                            <span className="font-medium leading-tight text-center">{ct.label}</span>
                           </button>
                         ))}
                       </div>
                     </div>
 
                     {/* Indicators */}
-                    <div className="p-4 border-b border-slate-700/60">
-                      <div className="text-xs font-600 text-slate-400 uppercase tracking-widest mb-3">Indicators</div>
+                    <div className="p-4 border-b" style={{ borderColor: '#1e2d42' }}>
+                      <div className="text-xs font-semibold text-slate-500 uppercase tracking-widest mb-3">Indicators</div>
                       <div className="grid grid-cols-3 gap-1.5">
                         {[
-                          { key: 'vwap', label: 'VWAP', active: showVWAP, premium: true, toggle: () => { if (!isPremium) { setUpgradeModal({ open: true, feature: 'VWAP' }); return; } setShowVWAP(v => !v); } },
-                          { key: 'bb', label: 'Bollinger', active: showBB, premium: true, toggle: () => { if (!isPremium) { setUpgradeModal({ open: true, feature: 'Bollinger Bands' }); return; } setShowBB(v => !v); } },
-                          { key: 'ma', label: 'MA', active: showMA, premium: false, toggle: () => setShowMA(v => !v) },
-                          { key: 'vol', label: 'Volume', active: showVolume, premium: false, toggle: () => setShowVolume(v => !v) },
-                          { key: 'rsi', label: 'RSI', active: showRSI, premium: false, toggle: () => setShowRSI(v => !v) },
-                          { key: 'macd', label: 'MACD', active: showMACD, premium: false, toggle: () => setShowMACD(v => !v) },
+                          { key: 'vwap', label: 'VWAP',     active: showVWAP,    premium: true,  toggle: () => { if (!isPremium) { setUpgradeModal({ open: true, feature: 'VWAP' }); return; } setShowVWAP(v => !v); } },
+                          { key: 'bb',   label: 'Bollinger', active: showBB,      premium: true,  toggle: () => { if (!isPremium) { setUpgradeModal({ open: true, feature: 'Bollinger Bands' }); return; } setShowBB(v => !v); } },
+                          { key: 'ma',   label: 'MA',        active: showMA,      premium: false, toggle: () => setShowMA(v => !v) },
+                          { key: 'vol',  label: 'Volume',    active: showVolume,  premium: false, toggle: () => setShowVolume(v => !v) },
+                          { key: 'rsi',  label: 'RSI',       active: showRSI,     premium: false, toggle: () => setShowRSI(v => !v) },
+                          { key: 'macd', label: 'MACD',      active: showMACD,    premium: false, toggle: () => setShowMACD(v => !v) },
                         ].map(item => (
                           <button
                             key={item.key}
                             onClick={item.toggle}
-                            className={`flex items-center justify-between px-2.5 py-2 rounded-lg cursor-pointer transition-all border text-xs font-600 ${
-                              item.active && (!item.premium || isPremium)
-                                ? 'bg-emerald-900/50 text-emerald-400 border-emerald-700/50'
-                                : 'bg-slate-800 text-slate-400 border-slate-700 hover:border-slate-600 hover:text-slate-300'
-                            }`}
+                            className="flex items-center justify-between px-2.5 py-2 rounded-lg cursor-pointer transition-all border text-xs font-semibold"
+                            style={item.active && (!item.premium || isPremium)
+                              ? { background: 'rgba(0,208,132,0.1)', color: '#00D084', borderColor: 'rgba(0,208,132,0.3)' }
+                              : { background: '#162030', color: '#64748b', borderColor: '#1e2d42' }}
                           >
                             <span>{item.label}</span>
                             {item.premium && !isPremium
-                              ? <i className="ri-lock-2-line text-xs text-slate-500" />
-                              : <div className={`w-1.5 h-1.5 rounded-full ${item.active && (!item.premium || isPremium) ? 'bg-emerald-400' : 'bg-slate-600'}`} />
+                              ? <i className="ri-lock-2-line text-xs text-slate-600" />
+                              : <div className="w-1.5 h-1.5 rounded-full" style={{ background: item.active && (!item.premium || isPremium) ? '#00D084' : '#334155' }} />
                             }
                           </button>
                         ))}
@@ -272,20 +298,24 @@ const ChartsPage = () => {
 
                     {/* Settings */}
                     <div className="p-4">
-                      <div className="text-xs font-600 text-slate-400 uppercase tracking-widest mb-3">Settings</div>
+                      <div className="text-xs font-semibold text-slate-500 uppercase tracking-widest mb-3">Settings</div>
                       <div className="space-y-3">
                         {[
-                          { label: 'Enable autoscroll', value: enableAutoscroll, set: setEnableAutoscroll },
-                          { label: 'Enable grid snap', value: enableGridSnap, set: setEnableGridSnap },
-                          { label: 'Cue Panel', value: showSignalPanel, set: setShowSignalPanel },
+                          { label: 'Autoscroll',  value: enableAutoscroll, set: setEnableAutoscroll },
+                          { label: 'Grid snap',   value: enableGridSnap,   set: setEnableGridSnap },
+                          { label: 'Cue Panel',   value: showSignalPanel,  set: setShowSignalPanel },
                         ].map(item => (
                           <div key={item.label} className="flex items-center justify-between">
-                            <span className="text-xs text-slate-300">{item.label}</span>
+                            <span className="text-xs text-slate-400">{item.label}</span>
                             <button
                               onClick={() => item.set(v => !v)}
-                              className={`relative w-9 h-5 rounded-full cursor-pointer transition-all ${item.value ? 'bg-emerald-500' : 'bg-slate-600'}`}
+                              className="relative w-9 h-5 rounded-full cursor-pointer transition-all"
+                              style={{ background: item.value ? '#F59E0B' : '#1e2d42' }}
                             >
-                              <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all ${item.value ? 'left-4' : 'left-0.5'}`} />
+                              <div
+                                className="absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all"
+                                style={{ left: item.value ? '1.1rem' : '0.125rem' }}
+                              />
                             </button>
                           </div>
                         ))}
@@ -295,27 +325,34 @@ const ChartsPage = () => {
                 )}
               </div>
 
-              <div className="w-px h-5 bg-slate-200" />
+              {/* Divider */}
+              <div className="w-px h-5" style={{ background: '#1e2d42' }} />
 
               {/* Quick timeframe strip */}
-              <div className="flex items-center gap-0.5 bg-slate-100 rounded-lg p-0.5">
-                {(['1m', '5m', '15m', '1H', '4H', 'D1'] as TF[]).map(tf => (
+              <div className="flex items-center gap-0.5 rounded-lg p-0.5" style={{ background: '#162030' }}>
+                {TIMEFRAMES.map(tf => (
                   <button
                     key={tf}
                     onClick={() => setTimeframe(tf)}
-                    className={`text-xs px-2.5 py-1 rounded-md cursor-pointer transition-all whitespace-nowrap font-mono font-600 ${timeframe === tf ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                    className="text-xs px-2.5 py-1 rounded-md cursor-pointer transition-all whitespace-nowrap font-mono font-semibold"
+                    style={timeframe === tf
+                      ? { background: '#F59E0B', color: '#080a0e' }
+                      : { color: '#64748b' }}
                   >
                     {tf}
                   </button>
                 ))}
               </div>
 
-              <div className="w-px h-5 bg-slate-200" />
+              <div className="w-px h-5" style={{ background: '#1e2d42' }} />
 
-              {/* Signal panel toggle */}
+              {/* Cue panel toggle */}
               <button
                 onClick={() => setShowSignalPanel(v => !v)}
-                className={`text-xs px-2.5 py-1 rounded-md cursor-pointer transition-all whitespace-nowrap font-mono font-600 border flex items-center gap-1 ${showSignalPanel ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-400 border-slate-200'}`}
+                className="text-xs px-2.5 py-1.5 rounded-md cursor-pointer transition-all font-mono font-semibold border flex items-center gap-1.5"
+                style={showSignalPanel
+                  ? { background: 'rgba(245,158,11,0.12)', color: '#F59E0B', borderColor: 'rgba(245,158,11,0.3)' }
+                  : { background: 'transparent', color: '#64748b', borderColor: '#1e2d42' }}
               >
                 <i className="ri-layout-right-line text-xs" />
                 Cue Panel
@@ -323,16 +360,16 @@ const ChartsPage = () => {
             </div>
           </div>
 
-          {/* Chart + Signal Panel */}
+          {/* ── Chart + Signal Panel ── */}
           <div className="flex-1 flex overflow-hidden">
 
             {/* Chart canvas */}
-            <div className="flex-1 relative overflow-hidden bg-white p-3">
+            <div className="flex-1 relative overflow-hidden" style={{ background: '#080a0e', padding: '12px 12px 12px 12px' }}>
               <CandlestickChart
                 bars={bars}
                 liveBar={liveBar}
                 livePrice={livePrice}
-                barProgress={barProgress}
+                barProgress={0}
                 chartType={chartType}
                 showVWAP={showVWAP && isPremium}
                 showBB={showBB && isPremium}
@@ -342,30 +379,46 @@ const ChartsPage = () => {
                 showMA={showMA}
                 signal={signal}
               />
+              {/* Loading overlay */}
+              {loading && (
+                <div
+                  className="absolute inset-0 flex flex-col items-center justify-center gap-3"
+                  style={{ background: 'rgba(8,10,14,0.85)' }}
+                >
+                  <div className="w-10 h-10 rounded-full border-2 border-transparent border-t-[#F59E0B] animate-spin" />
+                  <span className="text-sm text-slate-400">Fetching OHLCV data…</span>
+                  <span className="text-xs text-slate-600">{selectedAsset.symbol} · {timeframe}</span>
+                </div>
+              )}
             </div>
 
             {/* ── Cue Engine Signal Panel ── */}
             {showSignalPanel && (
-              <div className="w-64 flex-shrink-0 border-l border-slate-100 bg-white flex flex-col overflow-hidden">
-
+              <div
+                className="w-64 flex-shrink-0 flex flex-col overflow-hidden border-l"
+                style={{ background: '#0d1420', borderColor: '#1e2d42' }}
+              >
                 {/* Panel header */}
-                <div className="px-4 py-3 border-b border-slate-100">
+                <div className="px-4 py-3 border-b" style={{ borderColor: '#1e2d42' }}>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
-                      <span className="text-xs font-700 text-slate-700 tracking-wide">CUE ENGINE</span>
+                      <div className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: '#F59E0B' }} />
+                      <span className="text-xs font-bold text-white tracking-widest uppercase">Cue Engine</span>
                     </div>
-                    <span className="text-xs text-slate-400 font-mono">{selectedAsset.symbol}</span>
+                    <span className="text-xs text-slate-500 font-mono">{selectedAsset.symbol}</span>
                   </div>
                 </div>
 
                 {/* Tabs */}
-                <div className="flex border-b border-slate-100">
+                <div className="flex border-b" style={{ borderColor: '#1e2d42' }}>
                   {(['signal', 'levels'] as const).map(tab => (
                     <button
                       key={tab}
                       onClick={() => setActiveTab(tab)}
-                      className={`flex-1 py-2 text-xs font-600 cursor-pointer transition-all capitalize ${activeTab === tab ? 'text-blue-600 border-b-2 border-blue-500 bg-blue-50/50' : 'text-slate-400 hover:text-slate-600'}`}
+                      className="flex-1 py-2 text-xs font-semibold cursor-pointer transition-all capitalize border-b-2"
+                      style={activeTab === tab
+                        ? { color: '#F59E0B', borderBottomColor: '#F59E0B', background: 'rgba(245,158,11,0.05)' }
+                        : { color: '#475569', borderBottomColor: 'transparent' }}
                     >
                       {tab === 'signal' ? 'Signal' : 'Levels'}
                     </button>
@@ -373,218 +426,273 @@ const ChartsPage = () => {
                 </div>
 
                 <div className="flex-1 overflow-y-auto">
+
+                  {/* ── Signal tab ── */}
                   {activeTab === 'signal' && (
                     <div className="p-4 space-y-4">
-                      {/* Direction badge */}
                       {matchedCue ? (
                         <>
-                          <div className={`rounded-xl p-4 border ${
-                            matchedCue.direction === 'BUY' ? 'bg-green-50 border-green-200' :
-                            matchedCue.direction === 'SELL' ? 'bg-red-50 border-red-200' :
-                            'bg-slate-50 border-slate-200'
-                          }`}>
+                          {/* Direction card */}
+                          <div
+                            className="rounded-xl p-4 border"
+                            style={
+                              matchedCue.direction === 'BUY'
+                                ? { background: 'rgba(0,208,132,0.07)', borderColor: 'rgba(0,208,132,0.25)' }
+                                : matchedCue.direction === 'SELL'
+                                ? { background: 'rgba(255,77,77,0.07)', borderColor: 'rgba(255,77,77,0.25)' }
+                                : { background: 'rgba(245,158,11,0.07)', borderColor: 'rgba(245,158,11,0.25)' }
+                            }
+                          >
                             <div className="flex items-center justify-between mb-3">
                               <div className="flex items-center gap-2">
-                                <div className={`w-2 h-2 rounded-full ${dc.dot}`} />
-                                <span className={`text-lg font-800 font-mono ${dc.text}`}>{matchedCue.direction}</span>
+                                <div
+                                  className="w-2 h-2 rounded-full"
+                                  style={{ background: matchedCue.direction === 'BUY' ? '#00D084' : matchedCue.direction === 'SELL' ? '#FF4D4D' : '#F59E0B' }}
+                                />
+                                <span
+                                  className="text-lg font-bold font-mono"
+                                  style={{ color: matchedCue.direction === 'BUY' ? '#00D084' : matchedCue.direction === 'SELL' ? '#FF4D4D' : '#F59E0B' }}
+                                >
+                                  {matchedCue.direction}
+                                </span>
                               </div>
                               <div className="text-right">
-                                <div className="text-xs text-slate-400">Confidence</div>
-                                <div className={`text-base font-800 font-mono ${dc.text}`}>{matchedCue.confidence}%</div>
+                                <div className="text-xs text-slate-500">Confidence</div>
+                                <div
+                                  className="text-base font-bold font-mono"
+                                  style={{ color: matchedCue.direction === 'BUY' ? '#00D084' : matchedCue.direction === 'SELL' ? '#FF4D4D' : '#F59E0B' }}
+                                >
+                                  {matchedCue.confidence}%
+                                </div>
                               </div>
                             </div>
                             {/* Confidence bar */}
-                            <div className="h-1.5 bg-white rounded-full overflow-hidden">
+                            <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.08)' }}>
                               <div
-                                className={`h-full rounded-full transition-all ${matchedCue.direction === 'BUY' ? 'bg-green-500' : matchedCue.direction === 'SELL' ? 'bg-red-500' : 'bg-slate-400'}`}
-                                style={{ width: `${matchedCue.confidence}%` }}
+                                className="h-full rounded-full transition-all"
+                                style={{
+                                  width: `${matchedCue.confidence}%`,
+                                  background: matchedCue.direction === 'BUY' ? '#00D084' : matchedCue.direction === 'SELL' ? '#FF4D4D' : '#F59E0B',
+                                }}
                               />
                             </div>
-                            <div className="flex justify-between mt-1">
-                              <span className="text-xs text-slate-400">TF: {matchedCue.timeframe}</span>
-                              <span className="text-xs text-slate-400">{timeframe}</span>
+                            <div className="flex justify-between mt-1.5">
+                              <span className="text-xs text-slate-500">TF: {matchedCue.timeframe}</span>
+                              <span className="text-xs text-slate-500">{timeframe} view</span>
                             </div>
                           </div>
 
                           {/* Trade levels */}
-                          <div className="space-y-2">
-                            <div className="flex items-center justify-between py-2 border-b border-slate-100">
-                              <div className="flex items-center gap-2">
-                                <div className="w-2 h-2 rounded-full bg-blue-500" />
-                                <span className="text-xs text-slate-500">Entry</span>
+                          <div className="space-y-0">
+                            {[
+                              { dot: '#60A5FA', label: 'Entry',     value: matchedCue.entry,     pct: null },
+                              { dot: '#00D084', label: 'Target',    value: matchedCue.target,    pct: rewardPct !== null ? `+${rewardPct.toFixed(1)}%` : null },
+                              { dot: '#FF4D4D', label: 'Stop Loss', value: matchedCue.stopLoss,  pct: riskPct !== null ? `-${riskPct.toFixed(1)}%` : null },
+                            ].map(row => (
+                              <div
+                                key={row.label}
+                                className="flex items-center justify-between py-2.5 border-b"
+                                style={{ borderColor: '#1e2d42' }}
+                              >
+                                <div className="flex items-center gap-2">
+                                  <div className="w-2 h-2 rounded-full" style={{ background: row.dot }} />
+                                  <span className="text-xs text-slate-500">{row.label}</span>
+                                </div>
+                                <div className="text-right">
+                                  <div className="text-xs font-mono font-bold text-slate-200">{formatPrice(row.value)}</div>
+                                  {row.pct && (
+                                    <div className="text-xs font-mono" style={{ color: row.dot }}>{row.pct}</div>
+                                  )}
+                                </div>
                               </div>
-                              <span className="text-xs font-mono font-700 text-slate-800">{formatPrice(matchedCue.entry)}</span>
-                            </div>
-                            <div className="flex items-center justify-between py-2 border-b border-slate-100">
-                              <div className="flex items-center gap-2">
-                                <div className="w-2 h-2 rounded-full bg-green-500" />
-                                <span className="text-xs text-slate-500">Target</span>
-                              </div>
-                              <div className="text-right">
-                                <div className="text-xs font-mono font-700 text-green-600">{formatPrice(matchedCue.target)}</div>
-                                {rewardPct !== null && <div className="text-xs text-green-500">+{rewardPct.toFixed(1)}%</div>}
-                              </div>
-                            </div>
-                            <div className="flex items-center justify-between py-2 border-b border-slate-100">
-                              <div className="flex items-center gap-2">
-                                <div className="w-2 h-2 rounded-full bg-red-500" />
-                                <span className="text-xs text-slate-500">Stop Loss</span>
-                              </div>
-                              <div className="text-right">
-                                <div className="text-xs font-mono font-700 text-red-500">{formatPrice(matchedCue.stopLoss)}</div>
-                                {riskPct !== null && <div className="text-xs text-red-400">-{riskPct.toFixed(1)}%</div>}
-                              </div>
-                            </div>
+                            ))}
                           </div>
 
                           {/* R/R ratio */}
-                          <div className="bg-slate-50 rounded-xl p-3 border border-slate-200">
+                          <div className="rounded-xl p-3 border" style={{ background: '#162030', borderColor: '#1e2d42' }}>
                             <div className="flex items-center justify-between mb-2">
-                              <span className="text-xs text-slate-500 font-600">Risk / Reward</span>
-                              <span className="text-sm font-800 font-mono text-blue-600">{matchedCue.riskReward.toFixed(1)}:1</span>
+                              <span className="text-xs text-slate-500 font-semibold">Risk / Reward</span>
+                              <span className="text-sm font-bold font-mono" style={{ color: '#F59E0B' }}>
+                                {matchedCue.riskReward.toFixed(1)}:1
+                              </span>
                             </div>
-                            <div className="flex gap-1 h-2 rounded-full overflow-hidden">
-                              <div className="bg-red-400 rounded-l-full" style={{ width: `${100 / (matchedCue.riskReward + 1)}%` }} />
-                              <div className="bg-green-400 rounded-r-full flex-1" />
+                            <div className="flex gap-0.5 h-2 rounded-full overflow-hidden">
+                              <div className="rounded-l-full" style={{ background: '#FF4D4D', width: `${100 / (matchedCue.riskReward + 1)}%` }} />
+                              <div className="rounded-r-full flex-1" style={{ background: '#00D084' }} />
                             </div>
                             <div className="flex justify-between mt-1">
-                              <span className="text-xs text-red-400">Risk</span>
-                              <span className="text-xs text-green-500">Reward</span>
+                              <span className="text-xs" style={{ color: '#FF4D4D' }}>Risk</span>
+                              <span className="text-xs" style={{ color: '#00D084' }}>Reward</span>
                             </div>
                           </div>
 
-                          {/* Reasoning */}
+                          {/* AI reasoning */}
                           <div>
-                            <div className="text-xs font-600 text-slate-500 mb-2 uppercase tracking-wide">AI Reasoning</div>
-                            <div className="text-xs text-slate-600 leading-relaxed bg-slate-50 rounded-lg p-3 border border-slate-100">
+                            <div className="text-xs font-semibold text-slate-500 mb-2 uppercase tracking-wide">AI Reasoning</div>
+                            <div
+                              className="text-xs text-slate-400 leading-relaxed rounded-lg p-3 border"
+                              style={{ background: '#162030', borderColor: '#1e2d42' }}
+                            >
                               {matchedCue.direction === 'BUY'
-                                ? `Strong bullish momentum detected. Price action above VWAP with volume confirmation. RSI in preferred buy zone (40–65). MACD bullish crossover forming. Key support holding at ${formatPrice(matchedCue.stopLoss)}.`
+                                ? `Bullish momentum confirmed. RSI in preferred buy zone${rsiVal !== null ? ` (${rsiVal.toFixed(0)})` : ''}. MACD ${macdBullish ? 'bullish histogram' : 'diverging'}. ${emaCross ? `EMA9 vs EMA21: ${emaCross}.` : ''} Key support at ${formatPrice(matchedCue.stopLoss)}.`
                                 : matchedCue.direction === 'SELL'
-                                ? `Bearish divergence identified. Price rejected at resistance with declining volume. RSI overbought territory. MACD bearish crossover confirmed. Downside target at ${formatPrice(matchedCue.target)}.`
-                                : `Consolidation phase. No clear directional bias. Waiting for breakout confirmation above ${formatPrice(matchedCue.target)} or breakdown below ${formatPrice(matchedCue.stopLoss)}.`
+                                ? `Bearish pressure building. RSI${rsiVal !== null ? ` at ${rsiVal.toFixed(0)}` : ''} shows exhaustion. MACD ${!macdBullish ? 'bearish' : 'weakening'}. ${emaCross ? `EMA cross: ${emaCross}.` : ''} Target: ${formatPrice(matchedCue.target)}.`
+                                : `Consolidation phase. No clear directional bias. Watching ${formatPrice(matchedCue.target)} resistance and ${formatPrice(matchedCue.stopLoss)} support.`
                               }
                             </div>
                           </div>
                         </>
                       ) : (
-                        <div className="text-center py-8">
-                          <div className="w-10 h-10 flex items-center justify-center mx-auto mb-3 bg-slate-100 rounded-full">
-                            <i className="ri-radar-line text-slate-400 text-lg" />
+                        <div className="text-center py-10">
+                          <div
+                            className="w-12 h-12 flex items-center justify-center mx-auto mb-3 rounded-full"
+                            style={{ background: '#162030' }}
+                          >
+                            <i className="ri-radar-line text-slate-500 text-xl" />
                           </div>
-                          <div className="text-xs text-slate-400">No active signal for {selectedAsset.symbol}</div>
-                          <div className="text-xs text-slate-300 mt-1">Cue Engine is scanning...</div>
+                          <div className="text-xs text-slate-500">No active signal</div>
+                          <div className="text-xs text-slate-600 mt-1">Cue Engine scanning…</div>
                         </div>
                       )}
                     </div>
                   )}
 
+                  {/* ── Levels tab (real indicator values) ── */}
                   {activeTab === 'levels' && (
                     <div className="p-4 space-y-4">
-                      {/* Indicators */}
+
+                      {/* Real indicators */}
                       <div>
-                        <div className="text-xs font-600 text-slate-400 uppercase tracking-wide mb-3">Indicators</div>
-                        <div className="space-y-2">
-                          {[
-                            { label: 'RSI (14)', value: rsiVal.toString(), color: rsiColor, note: rsiVal > 70 ? 'Overbought' : rsiVal < 30 ? 'Oversold' : rsiVal >= 40 && rsiVal <= 65 ? 'Buy Zone' : 'Neutral' },
-                            { label: 'MACD', value: indicators.macd, color: macdPositive ? 'text-green-600' : 'text-red-500', note: macdPositive ? 'Bullish' : 'Bearish' },
-                            { label: 'BB Width', value: isPremium ? indicators.bbWidth : '—', color: 'text-slate-700', note: isPremium ? 'Volatility' : 'Premium' },
-                            { label: 'ATR (14)', value: indicators.atr, color: 'text-slate-700', note: 'Avg Range' },
-                            { label: 'Vol Ratio', value: indicators.volRatio, color: 'text-blue-600', note: 'vs Avg' },
-                          ].map(item => (
-                            <div key={item.label} className="flex items-center justify-between py-1.5 border-b border-slate-50">
-                              <div>
-                                <div className="text-xs text-slate-500">{item.label}</div>
-                                <div className="text-xs text-slate-300">{item.note}</div>
-                              </div>
-                              <span className={`text-xs font-mono font-700 ${item.color}`}>{item.value}</span>
+                        <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Live Indicators</div>
+                        <div className="space-y-0">
+                          {/* RSI */}
+                          <div className="flex items-center justify-between py-2.5 border-b" style={{ borderColor: '#1e2d42' }}>
+                            <div>
+                              <div className="text-xs text-slate-400">RSI (14)</div>
+                              <div className="text-xs text-slate-600">{rsiZone?.label ?? '—'}</div>
                             </div>
-                          ))}
+                            <span className={`text-xs font-mono font-bold ${rsiZone?.color ?? 'text-slate-500'}`}>
+                              {rsiVal !== null ? rsiVal.toFixed(1) : loading ? '…' : '—'}
+                            </span>
+                          </div>
+                          {/* MACD */}
+                          <div className="flex items-center justify-between py-2.5 border-b" style={{ borderColor: '#1e2d42' }}>
+                            <div>
+                              <div className="text-xs text-slate-400">MACD Hist.</div>
+                              <div className="text-xs text-slate-600">{indicators.macdHistogram !== null ? (macdBullish ? 'Bullish' : 'Bearish') : '—'}</div>
+                            </div>
+                            <span
+                              className="text-xs font-mono font-bold"
+                              style={{ color: indicators.macdHistogram !== null ? (macdBullish ? '#00D084' : '#FF4D4D') : '#475569' }}
+                            >
+                              {indicators.macdHistogram !== null
+                                ? (indicators.macdHistogram >= 0 ? '+' : '') + indicators.macdHistogram.toFixed(4)
+                                : loading ? '…' : '—'}
+                            </span>
+                          </div>
+                          {/* EMA cross */}
+                          <div className="flex items-center justify-between py-2.5 border-b" style={{ borderColor: '#1e2d42' }}>
+                            <div>
+                              <div className="text-xs text-slate-400">EMA 9 / 21</div>
+                              <div className="text-xs text-slate-600">{emaCross ?? '—'}</div>
+                            </div>
+                            <span
+                              className="text-xs font-mono font-bold"
+                              style={{ color: emaCross === 'Bullish' ? '#00D084' : emaCross === 'Bearish' ? '#FF4D4D' : '#475569' }}
+                            >
+                              {emaCross ?? (loading ? '…' : '—')}
+                            </span>
+                          </div>
+                          {/* ATR */}
+                          <div className="flex items-center justify-between py-2.5 border-b" style={{ borderColor: '#1e2d42' }}>
+                            <div>
+                              <div className="text-xs text-slate-400">ATR (14)</div>
+                              <div className="text-xs text-slate-600">Avg Range</div>
+                            </div>
+                            <span className="text-xs font-mono font-bold text-slate-400">
+                              {indicators.atr !== null ? formatPrice(indicators.atr) : loading ? '…' : '—'}
+                            </span>
+                          </div>
+                          {/* EMA9 value */}
+                          <div className="flex items-center justify-between py-2.5 border-b" style={{ borderColor: '#1e2d42' }}>
+                            <div>
+                              <div className="text-xs text-slate-400">EMA 9</div>
+                              <div className="text-xs text-slate-600">Fast MA</div>
+                            </div>
+                            <span className="text-xs font-mono font-bold text-slate-400">
+                              {indicators.ema9 !== null ? formatPrice(indicators.ema9) : loading ? '…' : '—'}
+                            </span>
+                          </div>
+                          {/* EMA21 value */}
+                          <div className="flex items-center justify-between py-2.5" >
+                            <div>
+                              <div className="text-xs text-slate-400">EMA 21</div>
+                              <div className="text-xs text-slate-600">Slow MA</div>
+                            </div>
+                            <span className="text-xs font-mono font-bold text-slate-400">
+                              {indicators.ema21 !== null ? formatPrice(indicators.ema21) : loading ? '…' : '—'}
+                            </span>
+                          </div>
                         </div>
                       </div>
 
-                      {/* Key levels */}
-                      <div>
-                        <div className="text-xs font-600 text-slate-400 uppercase tracking-wide mb-3">Key Levels</div>
-                        <div className="space-y-1.5">
-                          {[
-                            { label: 'Current', value: formatPrice(lastClose), color: 'text-slate-800', type: 'current' },
-                            { label: 'Day High', value: formatPrice(lastClose * 1.012), color: 'text-green-600', type: 'high' },
-                            { label: 'Day Low', value: formatPrice(lastClose * 0.988), color: 'text-red-500', type: 'low' },
-                            { label: 'VWAP', value: formatPrice(lastClose * 0.998), color: 'text-blue-500', type: 'vwap' },
-                            { label: 'Resistance', value: formatPrice(lastClose * 1.025), color: 'text-orange-500', type: 'res' },
-                            { label: 'Support', value: formatPrice(lastClose * 0.975), color: 'text-indigo-500', type: 'sup' },
-                          ].map(item => (
-                            <div key={item.label} className="flex items-center justify-between py-1.5 border-b border-slate-50">
-                              <span className="text-xs text-slate-500">{item.label}</span>
-                              <span className={`text-xs font-mono font-700 ${item.color}`}>{item.value}</span>
-                            </div>
-                          ))}
+                      {/* Bollinger (premium only) */}
+                      <div
+                        className="rounded-xl p-3 border flex items-center gap-3"
+                        style={{ background: 'rgba(245,158,11,0.04)', borderColor: 'rgba(245,158,11,0.15)' }}
+                      >
+                        <i className="ri-lock-2-line text-sm" style={{ color: '#F59E0B' }} />
+                        <div>
+                          <div className="text-xs font-semibold text-slate-300">Bollinger Bands</div>
+                          <div className="text-xs text-slate-600">Upgrade to Premium</div>
                         </div>
                       </div>
                     </div>
                   )}
                 </div>
-
-                {/* Bottom status bar */}
-                <div className="px-4 py-2.5 border-t border-slate-100 bg-slate-50">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-1.5">
-                      <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-                      <span className="text-xs text-slate-400">Live</span>
-                    </div>
-                    <span className="text-xs font-mono text-slate-400">{selectedAsset.sector}</span>
-                    <span className={`text-xs font-mono font-600 ${dc.text}`}>{selectedAsset.confidence}% conf</span>
-                  </div>
-                </div>
               </div>
             )}
           </div>
 
-          {/* Bottom status bar */}
-          <div className="px-4 py-2 flex items-center gap-5 flex-wrap border-t border-slate-100 bg-slate-50 flex-shrink-0">
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs text-slate-400">RSI</span>
-              <span className={`text-xs font-mono font-700 ${rsiColor}`}>{rsiVal}</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs text-slate-400">MACD</span>
-              <span className={`text-xs font-mono font-700 ${macdPositive ? 'text-green-600' : 'text-red-500'}`}>{indicators.macd}</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs text-slate-400">ATR</span>
-              <span className="text-xs font-mono font-700 text-slate-600">{indicators.atr}</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs text-slate-400">Vol Ratio</span>
-              <span className="text-xs font-mono font-700 text-blue-600">{indicators.volRatio}</span>
-            </div>
-            {isPremium && (
-              <div className="flex items-center gap-1.5">
-                <span className="text-xs text-slate-400">BB Width</span>
-                <span className="text-xs font-mono font-700 text-slate-600">{indicators.bbWidth}</span>
-              </div>
+          {/* ── Bottom indicator status bar ── */}
+          <div
+            className="flex-shrink-0 px-4 py-1.5 flex items-center gap-5 text-xs border-t overflow-x-auto"
+            style={{ background: '#0d1420', borderColor: '#1e2d42' }}
+          >
+            {rsiVal !== null && (
+              <span className="flex items-center gap-1.5 whitespace-nowrap">
+                <span className="text-slate-600">RSI</span>
+                <span className={`font-mono font-bold ${rsiZone?.color ?? 'text-slate-400'}`}>{rsiVal.toFixed(1)}</span>
+              </span>
             )}
-            <div className="ml-auto flex items-center gap-3">
-              <div className="flex items-center gap-1.5">
-                <div className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
-                <span className="text-xs text-slate-400 font-mono font-600">LIVE</span>
-                <span className={`text-xs font-mono font-700 ${livePrice > 0 && livePrice >= (bars[bars.length - 1]?.close ?? livePrice) ? 'text-green-600' : 'text-red-500'}`}>
-                  {formatPrice(livePrice > 0 ? livePrice : lastClose)}
+            {indicators.macdHistogram !== null && (
+              <span className="flex items-center gap-1.5 whitespace-nowrap">
+                <span className="text-slate-600">MACD</span>
+                <span className="font-mono font-bold" style={{ color: macdBullish ? '#00D084' : '#FF4D4D' }}>
+                  {macdBullish ? '▲' : '▼'} {Math.abs(indicators.macdHistogram).toFixed(4)}
                 </span>
-              </div>
-              <span className="text-xs text-slate-300">|</span>
-              <span className="text-xs text-slate-400 font-mono">Scroll to zoom · Drag to pan</span>
-            </div>
+              </span>
+            )}
+            {emaCross && (
+              <span className="flex items-center gap-1.5 whitespace-nowrap">
+                <span className="text-slate-600">EMA 9/21</span>
+                <span className="font-mono font-bold" style={{ color: emaCross === 'Bullish' ? '#00D084' : '#FF4D4D' }}>{emaCross}</span>
+              </span>
+            )}
+            {indicators.atr !== null && (
+              <span className="flex items-center gap-1.5 whitespace-nowrap">
+                <span className="text-slate-600">ATR</span>
+                <span className="font-mono font-bold text-slate-400">{formatPrice(indicators.atr)}</span>
+              </span>
+            )}
+            <span className="ml-auto flex items-center gap-1.5 text-slate-600 whitespace-nowrap">
+              <i className="ri-database-2-line" /> Twelve Data · {timeframe} · {bars.length} bars
+            </span>
           </div>
         </div>
       </div>
 
-      <UpgradeModal
-        open={upgradeModal.open}
-        onClose={() => setUpgradeModal({ open: false, feature: '' })}
-        featureName={upgradeModal.feature}
-        requiredPlan="desk"
-      />
+      <UpgradeModal open={upgradeModal.open} feature={upgradeModal.feature} onClose={() => setUpgradeModal({ open: false, feature: '' })} />
     </AppLayout>
   );
 };

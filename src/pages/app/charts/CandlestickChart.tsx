@@ -297,14 +297,14 @@ const CandlestickChart = ({ bars, liveBar, livePrice, barProgress = 0, chartType
           {/* Grid lines */}
           {priceLabels.map((p, i) => (
             <line key={i} x1={PADDING_LEFT} y1={toY(p)} x2={W - PADDING_RIGHT} y2={toY(p)}
-              stroke="#E5E7EB" strokeWidth="0.5" strokeDasharray="4,4" opacity="0.6" />
+              stroke="#1e2d42" strokeWidth="0.5" strokeDasharray="4,4" opacity="0.8" />
           ))}
 
           {/* Support/Resistance levels */}
           {srLevels.slice(0, 6).map((level, i) => (
             <g key={i}>
               <line x1={PADDING_LEFT} y1={toY(level)} x2={W - PADDING_RIGHT} y2={toY(level)}
-                stroke="#94A3B8" strokeWidth="0.8" strokeDasharray="6,4" opacity="0.5" />
+                stroke="#334155" strokeWidth="0.8" strokeDasharray="6,4" opacity="0.6" />
             </g>
           ))}
 
@@ -343,22 +343,22 @@ const CandlestickChart = ({ bars, liveBar, livePrice, barProgress = 0, chartType
               )}
               {/* Entry line */}
               <line x1={PADDING_LEFT} y1={toY(signal.entry)} x2={W - PADDING_RIGHT} y2={toY(signal.entry)}
-                stroke="#1D4ED8" strokeWidth="1.5" strokeDasharray="6,3" />
-              <rect x={W - PADDING_RIGHT} y={toY(signal.entry) - 9} width={PADDING_RIGHT - 2} height={18} fill="#1D4ED8" rx="3" />
-              <text x={W - PADDING_RIGHT + 4} y={toY(signal.entry) + 4} fontSize="9" fill="white" fontFamily="monospace" fontWeight="600">ENTRY</text>
+                stroke="#60A5FA" strokeWidth="1.5" strokeDasharray="6,3" />
+              <rect x={W - PADDING_RIGHT} y={toY(signal.entry) - 9} width={PADDING_RIGHT - 2} height={18} fill="#1e40af" rx="3" />
+              <text x={W - PADDING_RIGHT + 4} y={toY(signal.entry) + 4} fontSize="9" fill="#93c5fd" fontFamily="monospace" fontWeight="600">ENTRY</text>
               {/* Stop loss line */}
               <line x1={PADDING_LEFT} y1={toY(signal.stopLoss)} x2={W - PADDING_RIGHT} y2={toY(signal.stopLoss)}
-                stroke="#EF4444" strokeWidth="1.5" strokeDasharray="4,3" />
-              <rect x={W - PADDING_RIGHT} y={toY(signal.stopLoss) - 9} width={PADDING_RIGHT - 2} height={18} fill="#EF4444" rx="3" />
-              <text x={W - PADDING_RIGHT + 4} y={toY(signal.stopLoss) + 4} fontSize="9" fill="white" fontFamily="monospace" fontWeight="600">SL</text>
+                stroke="#FF4D4D" strokeWidth="1.5" strokeDasharray="4,3" />
+              <rect x={W - PADDING_RIGHT} y={toY(signal.stopLoss) - 9} width={PADDING_RIGHT - 2} height={18} fill="#7f1d1d" rx="3" />
+              <text x={W - PADDING_RIGHT + 4} y={toY(signal.stopLoss) + 4} fontSize="9" fill="#fca5a5" fontFamily="monospace" fontWeight="600">SL</text>
               {/* Target line */}
               <line x1={PADDING_LEFT} y1={toY(signal.target)} x2={W - PADDING_RIGHT} y2={toY(signal.target)}
-                stroke="#22C55E" strokeWidth="1.5" strokeDasharray="4,3" />
-              <rect x={W - PADDING_RIGHT} y={toY(signal.target) - 9} width={PADDING_RIGHT - 2} height={18} fill="#22C55E" rx="3" />
-              <text x={W - PADDING_RIGHT + 4} y={toY(signal.target) + 4} fontSize="9" fill="white" fontFamily="monospace" fontWeight="600">TP</text>
+                stroke="#00D084" strokeWidth="1.5" strokeDasharray="4,3" />
+              <rect x={W - PADDING_RIGHT} y={toY(signal.target) - 9} width={PADDING_RIGHT - 2} height={18} fill="#064e3b" rx="3" />
+              <text x={W - PADDING_RIGHT + 4} y={toY(signal.target) + 4} fontSize="9" fill="#6ee7b7" fontFamily="monospace" fontWeight="600">TP</text>
               {/* R/R badge */}
-              <rect x={PADDING_LEFT + 8} y={toY(signal.entry) - 22} width={72} height={18} fill="#1D4ED8" rx="4" opacity="0.9" />
-              <text x={PADDING_LEFT + 14} y={toY(signal.entry) - 9} fontSize="10" fill="white" fontFamily="monospace" fontWeight="700">
+              <rect x={PADDING_LEFT + 8} y={toY(signal.entry) - 22} width={72} height={18} fill="#1e40af" rx="4" opacity="0.9" />
+              <text x={PADDING_LEFT + 14} y={toY(signal.entry) - 9} fontSize="10" fill="#93c5fd" fontFamily="monospace" fontWeight="700">
                 R/R {signal.riskReward.toFixed(1)}:1
               </text>
             </>
@@ -367,23 +367,23 @@ const CandlestickChart = ({ bars, liveBar, livePrice, barProgress = 0, chartType
           {/* Bollinger Bands */}
           {showBB && (
             <>
-              <polyline points={polyline(bbUpper, v => toY(v))} fill="none" stroke="#6366F1" strokeWidth="1" opacity="0.5" />
-              <polyline points={polyline(bbLower, v => toY(v))} fill="none" stroke="#6366F1" strokeWidth="1" opacity="0.5" />
-              <polyline points={polyline(bbMid, v => toY(v))} fill="none" stroke="#6366F1" strokeWidth="0.8" strokeDasharray="3,3" opacity="0.35" />
+              <polyline points={polyline(bbUpper, v => toY(v))} fill="none" stroke="#a78bfa" strokeWidth="1" opacity="0.5" />
+              <polyline points={polyline(bbLower, v => toY(v))} fill="none" stroke="#a78bfa" strokeWidth="1" opacity="0.5" />
+              <polyline points={polyline(bbMid, v => toY(v))} fill="none" stroke="#a78bfa" strokeWidth="0.8" strokeDasharray="3,3" opacity="0.35" />
             </>
           )}
 
           {/* MA lines */}
           {showMA && (
             <>
-              <polyline points={polyline(ma20, v => toY(v))} fill="none" stroke="#F59E0B" strokeWidth="1.2" opacity="0.7" />
-              <polyline points={polyline(ma50, v => toY(v))} fill="none" stroke="#EC4899" strokeWidth="1.2" opacity="0.7" />
+              <polyline points={polyline(ma20, v => toY(v))} fill="none" stroke="#F59E0B" strokeWidth="1.2" opacity="0.8" />
+              <polyline points={polyline(ma50, v => toY(v))} fill="none" stroke="#f472b6" strokeWidth="1.2" opacity="0.8" />
             </>
           )}
 
           {/* VWAP */}
           {showVWAP && (
-            <polyline points={polyline(vwap, v => toY(v))} fill="none" stroke="#0EA5E9" strokeWidth="1.5" strokeDasharray="5,3" opacity="0.85" />
+            <polyline points={polyline(vwap, v => toY(v))} fill="none" stroke="#38bdf8" strokeWidth="1.5" strokeDasharray="5,3" opacity="0.85" />
           )}
 
           {/* Line chart */}
@@ -392,8 +392,8 @@ const CandlestickChart = ({ bars, liveBar, livePrice, barProgress = 0, chartType
               {/* Area fill */}
               <defs>
                 <linearGradient id="lineAreaGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#16A34A" stopOpacity="0.18" />
-                  <stop offset="100%" stopColor="#16A34A" stopOpacity="0.01" />
+                  <stop offset="0%" stopColor="#00D084" stopOpacity="0.20" />
+                  <stop offset="100%" stopColor="#00D084" stopOpacity="0.01" />
                 </linearGradient>
               </defs>
               <polygon
@@ -406,11 +406,11 @@ const CandlestickChart = ({ bars, liveBar, livePrice, barProgress = 0, chartType
               />
               <polyline
                 points={visibleBars.map((b, i) => `${toX(i)},${toY(b.close)}`).join(' ')}
-                fill="none" stroke="#16A34A" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round"
+                fill="none" stroke="#00D084" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round"
               />
               {/* Hover dot */}
               {hoverIdx !== null && visibleBars[hoverIdx] && (
-                <circle cx={toX(hoverIdx)} cy={toY(visibleBars[hoverIdx].close)} r={4} fill="#16A34A" stroke="white" strokeWidth="2" />
+                <circle cx={toX(hoverIdx)} cy={toY(visibleBars[hoverIdx].close)} r={4} fill="#00D084" stroke="#080a0e" strokeWidth="2" />
               )}
               {/* Invisible hover targets */}
               {visibleBars.map((_, i) => (
@@ -424,11 +424,11 @@ const CandlestickChart = ({ bars, liveBar, livePrice, barProgress = 0, chartType
           {chartType === 'bars' && visibleBars.map((bar, i) => {
             const cx = toX(i);
             const isBull = bar.bullish;
-            const color = isBull ? '#16A34A' : '#DC2626';
+            const color = isBull ? '#00D084' : '#FF4D4D';
             const isHov = hoverIdx === i;
             return (
               <g key={i} onMouseEnter={() => setHoverIdx(i)}>
-                {isHov && <rect x={cx - barSlotW / 2} y={0} width={barSlotW} height={priceH} fill="rgba(0,0,0,0.03)" />}
+                {isHov && <rect x={cx - barSlotW / 2} y={0} width={barSlotW} height={priceH} fill="rgba(255,255,255,0.02)" />}
                 {/* Vertical line high-low */}
                 <line x1={cx} y1={toY(bar.high)} x2={cx} y2={toY(bar.low)} stroke={color} strokeWidth="1.5" opacity={isHov ? 1 : 0.8} />
                 {/* Open tick left */}
@@ -447,13 +447,13 @@ const CandlestickChart = ({ bars, liveBar, livePrice, barProgress = 0, chartType
             const bodyBot = toY(Math.min(bar.open, bar.close));
             const bodyH = Math.max(1.5, bodyBot - bodyTop);
             const isHov = hoverIdx === i;
-            const bullColor = '#16A34A';
-            const bearColor = '#DC2626';
+            const bullColor = '#00D084';
+            const bearColor = '#FF4D4D';
             const color = isBull ? bullColor : bearColor;
 
             return (
               <g key={i} onMouseEnter={() => setHoverIdx(i)}>
-                {isHov && <rect x={cx - barSlotW / 2} y={0} width={barSlotW} height={priceH} fill="rgba(0,0,0,0.03)" />}
+                {isHov && <rect x={cx - barSlotW / 2} y={0} width={barSlotW} height={priceH} fill="rgba(255,255,255,0.02)" />}
                 <line x1={cx} y1={toY(bar.high)} x2={cx} y2={toY(bar.low)} stroke={color} strokeWidth="1" opacity={isHov ? 1 : 0.8} />
                 <rect x={cx - candleW / 2} y={bodyTop} width={candleW} height={bodyH}
                   fill={color} stroke={color} strokeWidth="0.5"
@@ -509,13 +509,13 @@ const CandlestickChart = ({ bars, liveBar, livePrice, barProgress = 0, chartType
           {/* Crosshair */}
           {hoverIdx !== null && (
             <>
-              <line x1={toX(hoverIdx)} y1={0} x2={toX(hoverIdx)} y2={priceH} stroke="#94A3B8" strokeWidth="0.8" strokeDasharray="3,3" opacity="0.6" />
+              <line x1={toX(hoverIdx)} y1={0} x2={toX(hoverIdx)} y2={priceH} stroke="#334155" strokeWidth="0.8" strokeDasharray="3,3" opacity="0.8" />
               <line x1={PADDING_LEFT} y1={hoveredBar ? toY(hoveredBar.close) : 0} x2={W - PADDING_RIGHT} y2={hoveredBar ? toY(hoveredBar.close) : 0}
-                stroke="#94A3B8" strokeWidth="0.8" strokeDasharray="3,3" opacity="0.6" />
+                stroke="#334155" strokeWidth="0.8" strokeDasharray="3,3" opacity="0.8" />
               {hoveredBar && (
                 <>
-                  <rect x={W - PADDING_RIGHT} y={toY(hoveredBar.close) - 9} width={PADDING_RIGHT - 2} height={18} fill="#1E293B" rx="3" />
-                  <text x={W - PADDING_RIGHT + 4} y={toY(hoveredBar.close) + 4} fontSize="9" fill="#F1F5F9" fontFamily="monospace">
+                  <rect x={W - PADDING_RIGHT} y={toY(hoveredBar.close) - 9} width={PADDING_RIGHT - 2} height={18} fill="#162030" rx="3" />
+                  <text x={W - PADDING_RIGHT + 4} y={toY(hoveredBar.close) + 4} fontSize="9" fill="#94a3b8" fontFamily="monospace">
                     {formatPrice(hoveredBar.close)}
                   </text>
                 </>
@@ -525,7 +525,7 @@ const CandlestickChart = ({ bars, liveBar, livePrice, barProgress = 0, chartType
 
           {/* Price axis labels */}
           {priceLabels.map((p, i) => (
-            <text key={i} x={W - PADDING_RIGHT + 6} y={toY(p) + 4} fontSize="10" fill="#64748B" fontFamily="monospace">
+            <text key={i} x={W - PADDING_RIGHT + 6} y={toY(p) + 4} fontSize="10" fill="#475569" fontFamily="monospace">
               {formatPrice(p)}
             </text>
           ))}
@@ -534,14 +534,14 @@ const CandlestickChart = ({ bars, liveBar, livePrice, barProgress = 0, chartType
           <g transform={`translate(${PADDING_LEFT + 8}, 14)`}>
             {showVWAP && (
               <g>
-                <line x1="0" y1="5" x2="14" y2="5" stroke="#0EA5E9" strokeWidth="1.5" strokeDasharray="4,2" />
-                <text x="18" y="9" fontSize="10" fill="#0EA5E9" fontFamily="monospace">VWAP</text>
+                <line x1="0" y1="5" x2="14" y2="5" stroke="#38bdf8" strokeWidth="1.5" strokeDasharray="4,2" />
+                <text x="18" y="9" fontSize="10" fill="#38bdf8" fontFamily="monospace">VWAP</text>
               </g>
             )}
             {showBB && (
               <g transform="translate(60,0)">
-                <line x1="0" y1="5" x2="14" y2="5" stroke="#6366F1" strokeWidth="1.5" />
-                <text x="18" y="9" fontSize="10" fill="#6366F1" fontFamily="monospace">BB(20)</text>
+                <line x1="0" y1="5" x2="14" y2="5" stroke="#a78bfa" strokeWidth="1.5" />
+                <text x="18" y="9" fontSize="10" fill="#a78bfa" fontFamily="monospace">BB(20)</text>
               </g>
             )}
             {showMA && (
@@ -551,8 +551,8 @@ const CandlestickChart = ({ bars, liveBar, livePrice, barProgress = 0, chartType
                   <text x="18" y="9" fontSize="10" fill="#F59E0B" fontFamily="monospace">MA20</text>
                 </g>
                 <g transform="translate(180,0)">
-                  <line x1="0" y1="5" x2="14" y2="5" stroke="#EC4899" strokeWidth="1.5" />
-                  <text x="18" y="9" fontSize="10" fill="#EC4899" fontFamily="monospace">MA50</text>
+                  <line x1="0" y1="5" x2="14" y2="5" stroke="#f472b6" strokeWidth="1.5" />
+                  <text x="18" y="9" fontSize="10" fill="#f472b6" fontFamily="monospace">MA50</text>
                 </g>
               </>
             )}
@@ -562,13 +562,13 @@ const CandlestickChart = ({ bars, liveBar, livePrice, barProgress = 0, chartType
         {/* ── VOLUME PANEL ── */}
         {showVolume && (
           <g transform={`translate(0, ${priceH})`}>
-            <rect x={0} y={0} width={W} height={volH} fill="rgba(241,245,249,0.5)" />
-            <line x1={PADDING_LEFT} y1={0} x2={W - PADDING_RIGHT} y2={0} stroke="#E2E8F0" strokeWidth="1" />
-            <text x={PADDING_LEFT + 4} y={12} fontSize="9" fill="#94A3B8" fontFamily="monospace" fontWeight="600">VOLUME</text>
+            <rect x={0} y={0} width={W} height={volH} fill="rgba(13,20,32,0.8)" />
+            <line x1={PADDING_LEFT} y1={0} x2={W - PADDING_RIGHT} y2={0} stroke="#1e2d42" strokeWidth="1" />
+            <text x={PADDING_LEFT + 4} y={12} fontSize="9" fill="#334155" fontFamily="monospace" fontWeight="600">VOLUME</text>
             {/* Avg volume line */}
             {(() => {
               const avgY = volH - (avgVol / maxVol) * (volH - 16) - 4;
-              return <line x1={PADDING_LEFT} y1={avgY} x2={W - PADDING_RIGHT} y2={avgY} stroke="#94A3B8" strokeWidth="0.8" strokeDasharray="4,3" opacity="0.6" />;
+              return <line x1={PADDING_LEFT} y1={avgY} x2={W - PADDING_RIGHT} y2={avgY} stroke="#334155" strokeWidth="0.8" strokeDasharray="4,3" opacity="0.8" />;
             })()}
             {visibleBars.map((bar, i) => {
               const cx = toX(i);
@@ -576,12 +576,12 @@ const CandlestickChart = ({ bars, liveBar, livePrice, barProgress = 0, chartType
               const isAboveAvg = bar.volume > avgVol;
               return (
                 <rect key={i} x={cx - candleW / 2} y={volH - bh} width={candleW} height={bh}
-                  fill={bar.bullish ? (isAboveAvg ? 'rgba(22,163,74,0.55)' : 'rgba(22,163,74,0.28)') : (isAboveAvg ? 'rgba(220,38,38,0.55)' : 'rgba(220,38,38,0.28)')}
+                  fill={bar.bullish ? (isAboveAvg ? 'rgba(0,208,132,0.5)' : 'rgba(0,208,132,0.22)') : (isAboveAvg ? 'rgba(255,77,77,0.5)' : 'rgba(255,77,77,0.22)')}
                   rx="0.5" />
               );
             })}
             {hoverIdx !== null && (
-              <line x1={toX(hoverIdx)} y1={0} x2={toX(hoverIdx)} y2={volH} stroke="#94A3B8" strokeWidth="0.8" strokeDasharray="3,3" opacity="0.5" />
+              <line x1={toX(hoverIdx)} y1={0} x2={toX(hoverIdx)} y2={volH} stroke="#334155" strokeWidth="0.8" strokeDasharray="3,3" opacity="0.5" />
             )}
           </g>
         )}
@@ -589,28 +589,28 @@ const CandlestickChart = ({ bars, liveBar, livePrice, barProgress = 0, chartType
         {/* ── RSI PANEL ── */}
         {showRSI && (
           <g transform={`translate(0, ${priceH + volH})`}>
-            <rect x={0} y={0} width={W} height={rsiH} fill="rgba(241,245,249,0.5)" />
-            <line x1={PADDING_LEFT} y1={0} x2={W - PADDING_RIGHT} y2={0} stroke="#E2E8F0" strokeWidth="1" />
-            <text x={PADDING_LEFT + 4} y={12} fontSize="9" fill="#94A3B8" fontFamily="monospace" fontWeight="600">RSI(14)</text>
+            <rect x={0} y={0} width={W} height={rsiH} fill="rgba(13,20,32,0.8)" />
+            <line x1={PADDING_LEFT} y1={0} x2={W - PADDING_RIGHT} y2={0} stroke="#1e2d42" strokeWidth="1" />
+            <text x={PADDING_LEFT + 4} y={12} fontSize="9" fill="#334155" fontFamily="monospace" fontWeight="600">RSI(14)</text>
             {/* Zone bands */}
-            <rect x={PADDING_LEFT} y={toRsiY(70)} width={W - PADDING_LEFT - PADDING_RIGHT} height={toRsiY(30) - toRsiY(70)} fill="rgba(99,102,241,0.04)" />
+            <rect x={PADDING_LEFT} y={toRsiY(70)} width={W - PADDING_LEFT - PADDING_RIGHT} height={toRsiY(30) - toRsiY(70)} fill="rgba(167,139,250,0.04)" />
             {/* 40-65 preferred BUY zone */}
-            <rect x={PADDING_LEFT} y={toRsiY(65)} width={W - PADDING_LEFT - PADDING_RIGHT} height={toRsiY(40) - toRsiY(65)} fill="rgba(34,197,94,0.05)" />
+            <rect x={PADDING_LEFT} y={toRsiY(65)} width={W - PADDING_LEFT - PADDING_RIGHT} height={toRsiY(40) - toRsiY(65)} fill="rgba(0,208,132,0.05)" />
             {RSI_LABELS.map(level => (
               <g key={level}>
                 <line x1={PADDING_LEFT} y1={toRsiY(level)} x2={W - PADDING_RIGHT} y2={toRsiY(level)}
-                  stroke={level === 70 ? 'rgba(220,38,38,0.3)' : level === 30 ? 'rgba(22,163,74,0.3)' : 'rgba(148,163,184,0.3)'}
+                  stroke={level === 70 ? 'rgba(255,77,77,0.3)' : level === 30 ? 'rgba(0,208,132,0.3)' : 'rgba(51,65,85,0.6)'}
                   strokeWidth="0.8" strokeDasharray="3,3" />
-                <text x={W - PADDING_RIGHT + 4} y={toRsiY(level) + 4} fontSize="9" fill="#94A3B8" fontFamily="monospace">{level}</text>
+                <text x={W - PADDING_RIGHT + 4} y={toRsiY(level) + 4} fontSize="9" fill="#334155" fontFamily="monospace">{level}</text>
               </g>
             ))}
-            <polyline points={polyline(rsiValues, v => toRsiY(v))} fill="none" stroke="#6366F1" strokeWidth="1.5" />
+            <polyline points={polyline(rsiValues, v => toRsiY(v))} fill="none" stroke="#a78bfa" strokeWidth="1.5" />
             {hoverIdx !== null && hoveredRsi !== null && typeof hoveredRsi === 'number' && (
               <>
-                <line x1={toX(hoverIdx)} y1={0} x2={toX(hoverIdx)} y2={rsiH} stroke="#94A3B8" strokeWidth="0.8" strokeDasharray="3,3" opacity="0.5" />
-                <circle cx={toX(hoverIdx)} cy={toRsiY(hoveredRsi)} r={3} fill="#6366F1" />
-                <rect x={W - PADDING_RIGHT} y={toRsiY(hoveredRsi) - 9} width={PADDING_RIGHT - 2} height={18} fill="#6366F1" rx="3" />
-                <text x={W - PADDING_RIGHT + 4} y={toRsiY(hoveredRsi) + 4} fontSize="9" fill="white" fontFamily="monospace">{(hoveredRsi as number).toFixed(1)}</text>
+                <line x1={toX(hoverIdx)} y1={0} x2={toX(hoverIdx)} y2={rsiH} stroke="#334155" strokeWidth="0.8" strokeDasharray="3,3" opacity="0.5" />
+                <circle cx={toX(hoverIdx)} cy={toRsiY(hoveredRsi)} r={3} fill="#a78bfa" />
+                <rect x={W - PADDING_RIGHT} y={toRsiY(hoveredRsi) - 9} width={PADDING_RIGHT - 2} height={18} fill="#4c1d95" rx="3" />
+                <text x={W - PADDING_RIGHT + 4} y={toRsiY(hoveredRsi) + 4} fontSize="9" fill="#c4b5fd" fontFamily="monospace">{(hoveredRsi as number).toFixed(1)}</text>
               </>
             )}
           </g>
@@ -619,11 +619,11 @@ const CandlestickChart = ({ bars, liveBar, livePrice, barProgress = 0, chartType
         {/* ── MACD PANEL ── */}
         {showMACD && (
           <g transform={`translate(0, ${priceH + volH + (showRSI ? indicatorH : 0)})`}>
-            <rect x={0} y={0} width={W} height={macdH} fill="rgba(241,245,249,0.5)" />
-            <line x1={PADDING_LEFT} y1={0} x2={W - PADDING_RIGHT} y2={0} stroke="#E2E8F0" strokeWidth="1" />
-            <text x={PADDING_LEFT + 4} y={12} fontSize="9" fill="#94A3B8" fontFamily="monospace" fontWeight="600">MACD(12,26,9)</text>
+            <rect x={0} y={0} width={W} height={macdH} fill="rgba(13,20,32,0.8)" />
+            <line x1={PADDING_LEFT} y1={0} x2={W - PADDING_RIGHT} y2={0} stroke="#1e2d42" strokeWidth="1" />
+            <text x={PADDING_LEFT + 4} y={12} fontSize="9" fill="#334155" fontFamily="monospace" fontWeight="600">MACD(12,26,9)</text>
             {/* Zero line */}
-            <line x1={PADDING_LEFT} y1={macdH / 2} x2={W - PADDING_RIGHT} y2={macdH / 2} stroke="#CBD5E1" strokeWidth="0.8" />
+            <line x1={PADDING_LEFT} y1={macdH / 2} x2={W - PADDING_RIGHT} y2={macdH / 2} stroke="#1e2d42" strokeWidth="0.8" />
             {/* Histogram */}
             {computed.histogram.map((v, i) => {
               const cx = toX(i);
@@ -632,23 +632,23 @@ const CandlestickChart = ({ bars, liveBar, livePrice, barProgress = 0, chartType
               const isBull = v >= 0;
               return (
                 <rect key={i} x={cx - candleW / 2} y={Math.min(y0, y1)} width={candleW} height={Math.abs(y0 - y1)}
-                  fill={isBull ? 'rgba(22,163,74,0.45)' : 'rgba(220,38,38,0.45)'} rx="0.5" />
+                  fill={isBull ? 'rgba(0,208,132,0.45)' : 'rgba(255,77,77,0.45)'} rx="0.5" />
               );
             })}
             {/* MACD line */}
-            <polyline points={polyline(computed.macdLine, v => toMacdY(v))} fill="none" stroke="#1D4ED8" strokeWidth="1.5" />
+            <polyline points={polyline(computed.macdLine, v => toMacdY(v))} fill="none" stroke="#60a5fa" strokeWidth="1.5" />
             {/* Signal line */}
             <polyline points={polyline(computed.signalLine, v => toMacdY(v))} fill="none" stroke="#F59E0B" strokeWidth="1.2" strokeDasharray="4,2" />
             {hoverIdx !== null && hoveredMacd !== null && typeof hoveredMacd === 'number' && (
               <>
-                <line x1={toX(hoverIdx)} y1={0} x2={toX(hoverIdx)} y2={macdH} stroke="#94A3B8" strokeWidth="0.8" strokeDasharray="3,3" opacity="0.5" />
-                <circle cx={toX(hoverIdx)} cy={toMacdY(hoveredMacd)} r={3} fill="#1D4ED8" />
+                <line x1={toX(hoverIdx)} y1={0} x2={toX(hoverIdx)} y2={macdH} stroke="#334155" strokeWidth="0.8" strokeDasharray="3,3" opacity="0.5" />
+                <circle cx={toX(hoverIdx)} cy={toMacdY(hoveredMacd)} r={3} fill="#60a5fa" />
               </>
             )}
             {/* MACD legend */}
             <g transform={`translate(${PADDING_LEFT + 60}, 8)`}>
-              <line x1="0" y1="5" x2="12" y2="5" stroke="#1D4ED8" strokeWidth="1.5" />
-              <text x="16" y="9" fontSize="9" fill="#1D4ED8" fontFamily="monospace">MACD</text>
+              <line x1="0" y1="5" x2="12" y2="5" stroke="#60a5fa" strokeWidth="1.5" />
+              <text x="16" y="9" fontSize="9" fill="#60a5fa" fontFamily="monospace">MACD</text>
               <line x1="52" y1="5" x2="64" y2="5" stroke="#F59E0B" strokeWidth="1.2" strokeDasharray="3,2" />
               <text x="68" y="9" fontSize="9" fill="#F59E0B" fontFamily="monospace">Signal</text>
             </g>
@@ -663,35 +663,35 @@ const CandlestickChart = ({ bars, liveBar, livePrice, barProgress = 0, chartType
           style={{
             top: 8,
             left: Math.min(toX(hoverIdx) + 12, W - 200),
-            background: 'white',
-            border: '1px solid #E2E8F0',
+            background: '#0d1420',
+            border: '1px solid #1e2d42',
             borderRadius: 8,
             padding: '8px 12px',
-            boxShadow: '0 4px 16px rgba(0,0,0,0.08)',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
             minWidth: 180,
           }}
         >
           <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-            <span className="text-xs text-slate-400">Open</span>
-            <span className="text-xs font-mono font-600 text-slate-700">{formatPrice(hoveredBar.open)}</span>
-            <span className="text-xs text-slate-400">High</span>
-            <span className="text-xs font-mono font-600 text-green-600">{formatPrice(hoveredBar.high)}</span>
-            <span className="text-xs text-slate-400">Low</span>
-            <span className="text-xs font-mono font-600 text-red-500">{formatPrice(hoveredBar.low)}</span>
-            <span className="text-xs text-slate-400">Close</span>
-            <span className={`text-xs font-mono font-600 ${hoveredBar.bullish ? 'text-green-600' : 'text-red-500'}`}>{formatPrice(hoveredBar.close)}</span>
-            <span className="text-xs text-slate-400">Volume</span>
-            <span className="text-xs font-mono font-600 text-slate-600">{(hoveredBar.volume * 100).toFixed(1)}M</span>
+            <span className="text-xs text-slate-600">Open</span>
+            <span className="text-xs font-mono font-semibold text-slate-300">{formatPrice(hoveredBar.open)}</span>
+            <span className="text-xs text-slate-600">High</span>
+            <span className="text-xs font-mono font-semibold" style={{ color: '#00D084' }}>{formatPrice(hoveredBar.high)}</span>
+            <span className="text-xs text-slate-600">Low</span>
+            <span className="text-xs font-mono font-semibold" style={{ color: '#FF4D4D' }}>{formatPrice(hoveredBar.low)}</span>
+            <span className="text-xs text-slate-600">Close</span>
+            <span className="text-xs font-mono font-semibold" style={{ color: hoveredBar.bullish ? '#00D084' : '#FF4D4D' }}>{formatPrice(hoveredBar.close)}</span>
+            <span className="text-xs text-slate-600">Volume</span>
+            <span className="text-xs font-mono font-semibold text-slate-400">{(hoveredBar.volume * 100).toFixed(1)}M</span>
             {hoveredRsi !== null && typeof hoveredRsi === 'number' && (
               <>
-                <span className="text-xs text-slate-400">RSI</span>
-                <span className={`text-xs font-mono font-600 ${hoveredRsi > 70 ? 'text-red-500' : hoveredRsi < 30 ? 'text-green-600' : 'text-indigo-500'}`}>{hoveredRsi.toFixed(1)}</span>
+                <span className="text-xs text-slate-600">RSI</span>
+                <span className="text-xs font-mono font-semibold" style={{ color: hoveredRsi > 70 ? '#FF4D4D' : hoveredRsi < 30 ? '#00D084' : '#a78bfa' }}>{hoveredRsi.toFixed(1)}</span>
               </>
             )}
             {hoveredMacd !== null && typeof hoveredMacd === 'number' && (
               <>
-                <span className="text-xs text-slate-400">MACD</span>
-                <span className={`text-xs font-mono font-600 ${hoveredMacd >= 0 ? 'text-green-600' : 'text-red-500'}`}>{hoveredMacd.toFixed(4)}</span>
+                <span className="text-xs text-slate-600">MACD</span>
+                <span className="text-xs font-mono font-semibold" style={{ color: hoveredMacd >= 0 ? '#00D084' : '#FF4D4D' }}>{hoveredMacd.toFixed(4)}</span>
               </>
             )}
           </div>
