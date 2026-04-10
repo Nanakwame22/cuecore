@@ -6,7 +6,16 @@ import { useState, useEffect } from 'react';
 import { fetchTimeSeries, OHLCVBar, TDInterval } from '@/services/twelveData';
 import { computeRSI, computeMACD, computeATR, latestEMA } from '@/services/indicators';
 import { useLivePrice } from '@/hooks/useLivePrices';
-import type { OHLCBar } from '@/mocks/appData';
+import { generateChartBars, watchlistAssets, type OHLCBar } from '@/mocks/appData';
+
+// Legacy timeframe label used by generateChartBars mock generator
+const toMockTf = (tf: string): string => {
+  const map: Record<string, string> = {
+    '1m': '1H', '5m': '1H', '15m': '1H', '30m': '4H',
+    '1H': '4H', '4H': '4H', 'D1': '1D',
+  };
+  return map[tf] ?? '4H';
+};
 
 // ── Timeframe → Twelve Data interval ─────────────────────────────────────────
 const TF_TO_INTERVAL: Record<string, TDInterval> = {
@@ -54,9 +63,10 @@ export interface RealChartState {
 export const useRealChart = (symbol: string, tf: string): RealChartState => {
   const interval: TDInterval = TF_TO_INTERVAL[tf] ?? '1h';
 
-  const [rawBars,  setRawBars]  = useState<OHLCVBar[]>([]);
-  const [loading,  setLoading]  = useState(true);
-  const [error,    setError]    = useState(false);
+  const [rawBars,    setRawBars]    = useState<OHLCVBar[]>([]);
+  const [mockBars,   setMockBars]   = useState<OHLCBar[]>([]);
+  const [loading,    setLoading]    = useState(true);
+  const [error,      setError]      = useState(false);
 
   // Live price for the forming bar (served from cache — no extra API budget)
   const { price: livePriceData } = useLivePrice(symbol);
@@ -66,28 +76,43 @@ export const useRealChart = (symbol: string, tf: string): RealChartState => {
     let cancelled = false;
     setLoading(true);
     setError(false);
+    setMockBars([]);
 
-    fetchTimeSeries(symbol, interval, 200)
+    fetchTimeSeries(symbol, interval, 100)
       .then(bars => {
         if (!cancelled) { setRawBars(bars); setLoading(false); }
       })
-      .catch(() => {
-        if (!cancelled) { setError(true); setLoading(false); }
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        // Log so we can diagnose the Twelve Data error in the console
+        console.warn(`[useRealChart] API error for ${symbol} ${interval}:`, err);
+        // Fall back to deterministic mock bars so the chart is never blank
+        const asset   = watchlistAssets.find(a => a.symbol === symbol);
+        const price   = asset?.price ?? 100;
+        const assetId = asset?.id ?? symbol;
+        setMockBars(generateChartBars(assetId, toMockTf(tf), price));
+        setError(true);
+        setLoading(false);
       });
 
     return () => { cancelled = true; };
-  }, [symbol, interval]);
+  }, [symbol, interval, tf]);
 
   // ── Derived state ─────────────────────────────────────────────────────────
 
   const convertedBars = rawBars.map(toOHLCBar);
   const livePriceVal  = livePriceData?.price ?? 0;
 
-  // Historical = everything except the last bar (last bar shown as liveBar)
-  const historicalBars = convertedBars.length > 1 ? convertedBars.slice(0, -1) : convertedBars;
+  // Use real bars when available, fall back to mock on error
+  const sourceBars = convertedBars.length > 0 ? convertedBars : mockBars;
 
-  // Live (forming) bar: last OHLCV bar with close updated to real-time price
+  // Historical = everything except the last bar (last bar shown as liveBar)
+  const historicalBars = sourceBars.length > 1 ? sourceBars.slice(0, -1) : sourceBars;
+
+  // Live (forming) bar: last bar with close updated to real-time price
   const lastRaw = rawBars[rawBars.length - 1];
+  const lastMock = mockBars[mockBars.length - 1];
+
   const liveBar: OHLCBar | null = lastRaw
     ? {
         open:    lastRaw.open,
@@ -97,21 +122,24 @@ export const useRealChart = (symbol: string, tf: string): RealChartState => {
         volume:  lastRaw.volume || 0,
         bullish: (livePriceVal > 0 ? livePriceVal : lastRaw.close) >= lastRaw.open,
       }
+    : lastMock
+    ? { ...lastMock }
     : null;
 
   const livePrice = livePriceVal > 0
     ? livePriceVal
-    : (convertedBars.length > 0 ? convertedBars[convertedBars.length - 1].close : 0);
+    : (sourceBars.length > 0 ? sourceBars[sourceBars.length - 1].close : 0);
 
-  // ── Indicators (full bar set) ─────────────────────────────────────────────
+  // ── Indicators (real bars preferred, mock as fallback) ───────────────────
 
-  const closes = rawBars.map(b => b.close);
+  const closes     = rawBars.length > 0 ? rawBars.map(b => b.close) : sourceBars.map(b => b.close);
+  const atrSource  = rawBars.length > 0 ? rawBars : [];
 
-  const rsi           = closes.length >= 15 ? computeRSI(closes)   : null;
-  const macdResult    = closes.length >= 27 ? computeMACD(closes)  : null;
-  const ema9          = closes.length >=  9 ? latestEMA(closes, 9)  : null;
-  const ema21         = closes.length >= 21 ? latestEMA(closes, 21) : null;
-  const atr           = rawBars.length >= 14 ? computeATR(rawBars)  : null;
+  const rsi        = closes.length >= 15 ? computeRSI(closes)      : null;
+  const macdResult = closes.length >= 27 ? computeMACD(closes)     : null;
+  const ema9       = closes.length >=  9 ? latestEMA(closes, 9)    : null;
+  const ema21      = closes.length >= 21 ? latestEMA(closes, 21)   : null;
+  const atr        = atrSource.length >= 14 ? computeATR(atrSource) : null;
 
   return {
     bars:        historicalBars,

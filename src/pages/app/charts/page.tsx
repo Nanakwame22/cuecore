@@ -686,7 +686,7 @@ const ChartsPage = () => {
               </span>
             )}
             <span className="ml-auto flex items-center gap-1.5 text-slate-600 whitespace-nowrap">
-              <i className="ri-database-2-line" /> Twelve Data · {timeframe} · {bars.length} bars
+              <i className="ri-database-2-line" /> {error ? 'Mock data' : 'Twelve Data'} · {timeframe} · {bars.length} bars
             </span>
           </div>
         </div>
