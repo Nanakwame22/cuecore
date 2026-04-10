@@ -119,7 +119,7 @@ const CandlestickChart = ({ bars, liveBar, livePrice, barProgress = 0, chartType
       const tp = (b.high + b.low + b.close) / 3;
       cumTPV += tp * b.volume;
       cumVol += b.volume;
-      return cumTPV / cumVol;
+      return cumVol > 0 ? cumTPV / cumVol : tp;
     });
 
     // Bollinger Bands (20-period)
@@ -165,7 +165,7 @@ const CandlestickChart = ({ bars, liveBar, livePrice, barProgress = 0, chartType
     const dedupedSR = srLevels.filter((v, i, arr) => !arr.slice(0, i).some(u => Math.abs(u - v) / v < 0.005));
 
     // Volume stats
-    const maxVol = Math.max(...visibleBars.map(b => b.volume));
+    const maxVol = Math.max(1, ...visibleBars.map(b => b.volume));
     const avgVol = visibleBars.reduce((a, b) => a + b.volume, 0) / visibleBars.length;
 
     // RSI (14)
@@ -221,17 +221,25 @@ const CandlestickChart = ({ bars, liveBar, livePrice, barProgress = 0, chartType
   const { maxH, minL, vwap, bbUpper, bbLower, bbMid, ma20, ma50, priceLabels, srLevels, maxVol, avgVol, rsiValues, macdLine, signalLine, histogram } = computed;
 
   const range = maxH - minL;
-  const toY = (price: number, h: number = priceH) =>
-    range > 0 ? ((maxH - price) / range) * h : h / 2;
+  const toY = (price: number, h: number = priceH): number => {
+    if (!isFinite(price)) return h / 2;
+    return range > 0 ? ((maxH - price) / range) * h : h / 2;
+  };
 
   // RSI Y mapping
   const rsiH = indicatorH;
-  const toRsiY = (v: number) => ((100 - v) / 100) * (rsiH - 20) + 10;
+  const toRsiY = (v: number): number => {
+    if (!isFinite(v)) return rsiH / 2;
+    return ((100 - v) / 100) * (rsiH - 20) + 10;
+  };
 
   // MACD Y mapping
   const macdH = indicatorH;
   const macdMax = Math.max(...computed.histogram.map(Math.abs), 0.0001) * 1.4;
-  const toMacdY = (v: number) => macdH / 2 - (v / macdMax) * (macdH / 2 - 8);
+  const toMacdY = (v: number): number => {
+    if (!isFinite(v)) return macdH / 2;
+    return macdH / 2 - (v / macdMax) * (macdH / 2 - 8);
+  };
 
   // Polyline builder
   const polyline = (points: (number | null)[], yFn: (v: number) => number) =>
