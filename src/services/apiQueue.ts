@@ -33,9 +33,16 @@ const tick = () => {
   });
 };
 
-/** Enqueue an API call. Returns a Promise that resolves when the call completes. */
+/** Enqueue an API call at the back of the queue (live prices, signal scans). */
 export const enqueueApiCall = <T>(fn: () => Promise<T>): Promise<T> =>
   new Promise<T>((resolve, reject) => {
     queue.push({ fn, resolve, reject });
+    if (!timer) tick();
+  });
+
+/** Enqueue an API call at the FRONT of the queue (chart OHLCV — user is waiting). */
+export const enqueueApiCallPriority = <T>(fn: () => Promise<T>): Promise<T> =>
+  new Promise<T>((resolve, reject) => {
+    queue.unshift({ fn, resolve, reject });
     if (!timer) tick();
   });

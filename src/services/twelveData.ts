@@ -3,7 +3,7 @@
 // raw candles so we don't burn through the free-tier 800 req/day limit.
 // All fetches go through the shared apiQueue to respect the 8 req/min cap.
 
-import { enqueueApiCall } from './apiQueue';
+import { enqueueApiCall, enqueueApiCallPriority } from './apiQueue';
 
 const API_KEY = import.meta.env.VITE_TWELVE_DATA_KEY as string;
 const BASE = 'https://api.twelvedata.com';
@@ -81,8 +81,8 @@ export const fetchTimeSeries = (
   const cached = seriesCache.get(key);
   // Return cached data immediately — no queue needed
   if (cached && Date.now() - cached.fetchedAt < CACHE_TTL) return Promise.resolve(cached.bars);
-  // Otherwise enqueue the real API call
-  return enqueueApiCall(() => _doFetch(symbol, interval, outputsize));
+  // Otherwise enqueue with priority — user is actively waiting for the chart
+  return enqueueApiCallPriority(() => _doFetch(symbol, interval, outputsize));
 };
 
 /** Invalidate cache for a symbol (e.g. after a forced refresh) */
