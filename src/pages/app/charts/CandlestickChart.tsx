@@ -216,11 +216,13 @@ const CandlestickChart = ({ bars, liveBar, livePrice, barProgress = 0, chartType
     return { maxH, minL, vwap, bbUpper, bbLower, bbMid, ma20, ma50, priceLabels, srLevels: dedupedSR, maxVol, avgVol, rsiValues, macdLine, signalLine, histogram };
   }, [visibleBars]);
 
-  if (!computed) return null;
+  if (!computed || priceH <= 0) return null;
 
   const { maxH, minL, vwap, bbUpper, bbLower, bbMid, ma20, ma50, priceLabels, srLevels, maxVol, avgVol, rsiValues, macdLine, signalLine, histogram } = computed;
 
-  const toY = (price: number, h: number = priceH) => ((maxH - price) / (maxH - minL)) * h;
+  const range = maxH - minL;
+  const toY = (price: number, h: number = priceH) =>
+    range > 0 ? ((maxH - price) / range) * h : h / 2;
 
   // RSI Y mapping
   const rsiH = indicatorH;
