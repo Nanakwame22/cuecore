@@ -54,7 +54,22 @@ const ChartsPage = () => {
   const [activeTab,        setActiveTab]        = useState<'signal' | 'levels'>('signal');
   const [upgradeModal,     setUpgradeModal]     = useState<{ open: boolean; feature: string }>({ open: false, feature: '' });
   const [showMobileSidebar, setShowMobileSidebar] = useState(false);
+  const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
   const chartOptionsRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const onResize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+
+  const isMobile = windowWidth < 768;
+
+  // Auto-hide signal panel on mobile
+  useEffect(() => {
+    if (isMobile) setShowSignalPanel(false);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isMobile]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -122,83 +137,91 @@ const ChartsPage = () => {
   return (
     <AppLayout title="Charts" subtitle="Institutional-grade charting with live OHLCV and Cue Engine overlay">
       {/* Full dark surface */}
-      <div className="flex h-full overflow-hidden" style={{ background: '#080a0e' }}>
+      <div className="relative flex h-full overflow-hidden" style={{ background: '#080a0e' }}>
 
         {/* ── Instrument Sidebar ─────────────────────────────────────────── */}
-        <>
-          {/* Mobile backdrop */}
-          {showMobileSidebar && (
-            <div
-              className="fixed inset-0 z-40 bg-black/60 md:hidden"
-              onClick={() => setShowMobileSidebar(false)}
-            />
-          )}
-
+        {/* Mobile backdrop */}
+        {isMobile && showMobileSidebar && (
           <div
-            className={`fixed md:relative inset-y-0 left-0 z-50 w-64 md:w-52 flex-shrink-0 flex flex-col overflow-hidden border-r transition-transform duration-300 ${showMobileSidebar ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0`}
-            style={{ background: '#0d1420', borderColor: '#1e2d42' }}
-          >
-            {/* Mobile close button */}
-            <div className="md:hidden flex items-center justify-between px-3 py-2 border-b" style={{ borderColor: '#1e2d42' }}>
-              <span className="text-xs font-bold text-white uppercase tracking-widest">Instruments</span>
-              <button
-                onClick={() => setShowMobileSidebar(false)}
-                className="text-slate-400 hover:text-white text-lg leading-none"
-              >
+            style={{ position: 'absolute', inset: 0, zIndex: 40, background: 'rgba(0,0,0,0.6)' }}
+            onClick={() => setShowMobileSidebar(false)}
+          />
+        )}
+        <div
+          style={{
+            display: isMobile ? (showMobileSidebar ? 'flex' : 'none') : 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden',
+            flexShrink: 0,
+            width: isMobile ? '100%' : '208px',
+            position: isMobile ? 'absolute' : 'relative',
+            top: 0, bottom: 0, left: 0,
+            zIndex: isMobile ? 50 : 'auto',
+            background: '#0d1420',
+            borderRight: '1px solid #1e2d42',
+          }}
+        >
+          {/* Mobile header with close button */}
+          {isMobile && (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', borderBottom: '1px solid #1e2d42', flexShrink: 0 }}>
+              <span style={{ fontSize: 11, fontWeight: 700, color: 'white', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Instruments</span>
+              <button onClick={() => setShowMobileSidebar(false)} style={{ color: '#94a3b8', fontSize: 18, lineHeight: 1, background: 'none', border: 'none', cursor: 'pointer' }}>
                 <i className="ri-close-line" />
               </button>
             </div>
+          )}
 
-            {/* Search */}
-            <div className="px-3 py-3 border-b" style={{ borderColor: '#1e2d42' }}>
-              <div className="relative">
-                <i className="ri-search-line absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500 text-xs" />
-                <input
-                  type="text"
-                  placeholder="Search symbol…"
-                  value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
-                  className="w-full pl-7 pr-3 py-1.5 text-xs rounded-md text-slate-300 placeholder-slate-600 focus:outline-none focus:ring-1"
-                  style={{ background: '#162030', border: '1px solid #1e2d42', '--tw-ring-color': '#F59E0B' } as React.CSSProperties}
-                />
-              </div>
-            </div>
-
-            {/* Asset list */}
-            <div className="flex-1 overflow-y-auto">
-              {filteredAssets.map(asset => {
-                const isActive = asset.id === selectedId;
-                const up = asset.change >= 0;
-                return (
-                  <button
-                    key={asset.id}
-                    onClick={() => { setSelectedId(asset.id); setShowMobileSidebar(false); }}
-                    className="w-full px-3 py-2.5 text-left cursor-pointer transition-all border-l-2"
-                    style={{
-                      background: isActive ? 'rgba(245,158,11,0.07)' : 'transparent',
-                      borderLeftColor: isActive ? '#F59E0B' : 'transparent',
-                    }}
-                    onMouseEnter={e => { if (!isActive) (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.03)'; }}
-                    onMouseLeave={e => { if (!isActive) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className={`text-xs font-mono font-bold ${isActive ? 'text-[#F59E0B]' : 'text-slate-300'}`}>
-                        {asset.symbol}
-                      </span>
-                      <span className={`text-xs font-mono ${up ? 'text-[#00D084]' : 'text-[#FF4D4D]'}`}>
-                        {formatChange(asset.change)}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between mt-0.5">
-                      <span className="text-xs text-slate-600 truncate">{asset.name}</span>
-                      <span className={`text-xs ${sectorColor(asset.sector)}`}>{asset.sector}</span>
-                    </div>
-                  </button>
-                );
-              })}
+          {/* Search */}
+          <div className="px-3 py-3 border-b flex-shrink-0" style={{ borderColor: '#1e2d42' }}>
+            <div className="relative">
+              <i className="ri-search-line absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500 text-xs" />
+              <input
+                type="text"
+                placeholder="Search symbol…"
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                className="w-full pl-7 pr-3 py-1.5 text-xs rounded-md text-slate-300 placeholder-slate-600 focus:outline-none focus:ring-1"
+                style={{ background: '#162030', border: '1px solid #1e2d42', '--tw-ring-color': '#F59E0B' } as React.CSSProperties}
+              />
             </div>
           </div>
-        </>
+
+          {/* Asset list */}
+          <div className="flex-1 overflow-y-auto">
+            {filteredAssets.map(asset => {
+              const isActive = asset.id === selectedId;
+              const up = asset.change >= 0;
+              return (
+                <button
+                  key={asset.id}
+                  onClick={() => { setSelectedId(asset.id); setShowMobileSidebar(false); }}
+                  style={{
+                    display: 'block', width: '100%', padding: '10px 12px',
+                    textAlign: 'left', cursor: 'pointer', border: 'none',
+                    borderLeft: `2px solid ${isActive ? '#F59E0B' : 'transparent'}`,
+                    background: isActive ? 'rgba(245,158,11,0.07)' : 'transparent',
+                    transition: 'background 0.15s',
+                  }}
+                  onMouseEnter={e => { if (!isActive) (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.03)'; }}
+                  onMouseLeave={e => { if (!isActive) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className={`text-xs font-mono font-bold ${isActive ? 'text-[#F59E0B]' : 'text-slate-300'}`}>
+                      {asset.symbol}
+                    </span>
+                    <span className={`text-xs font-mono ${up ? 'text-[#00D084]' : 'text-[#FF4D4D]'}`}>
+                      {formatChange(asset.change)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between mt-0.5">
+                    <span className="text-xs text-slate-600 truncate">{asset.name}</span>
+                    <span className={`text-xs ${sectorColor(asset.sector)}`}>{asset.sector}</span>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
 
         {/* ── Main Chart Area ───────────────────────────────────────────── */}
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
@@ -209,19 +232,21 @@ const ChartsPage = () => {
             style={{ background: '#0d1420', borderColor: '#1e2d42' }}
           >
             {/* Hamburger — mobile only */}
-            <button
-              onClick={() => setShowMobileSidebar(true)}
-              className="md:hidden text-slate-400 hover:text-white flex items-center justify-center w-8 h-8 rounded-md"
-              style={{ background: 'transparent' }}
-            >
-              <i className="ri-menu-line text-base" />
-            </button>
+            {/* Hamburger — mobile only */}
+            {isMobile && (
+              <button
+                onClick={() => setShowMobileSidebar(true)}
+                style={{ color: '#94a3b8', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32, borderRadius: 6, flexShrink: 0 }}
+              >
+                <i className="ri-menu-line" style={{ fontSize: 16 }} />
+              </button>
+            )}
 
             {/* Asset info */}
             <div className="flex items-center gap-2 md:gap-3 min-w-0">
               <div className="min-w-0">
                 <span className="font-mono font-bold text-white text-sm">{selectedAsset.symbol}</span>
-                <span className="text-slate-500 text-xs ml-1.5 hidden sm:inline">{selectedAsset.name}</span>
+                {!isMobile && <span className="text-slate-500 text-xs ml-1.5">{selectedAsset.name}</span>}
               </div>
               <span className="text-base font-mono font-bold text-white whitespace-nowrap">
                 {loading ? '—' : formatPrice(lastPrice)}
@@ -356,27 +381,30 @@ const ChartsPage = () => {
                 )}
               </div>
 
-              {/* Divider — desktop only */}
-              <div className="w-px h-5 hidden md:block" style={{ background: '#1e2d42' }} />
-
-              {/* Quick timeframe strip — desktop only */}
-              <div className="hidden md:flex items-center gap-0.5 rounded-lg p-0.5" style={{ background: '#162030' }}>
-                {TIMEFRAMES.map(tf => (
-                  <button
-                    key={tf}
-                    onClick={() => setTimeframe(tf)}
-                    className="text-xs px-2.5 py-1 rounded-md cursor-pointer transition-all whitespace-nowrap font-mono font-semibold"
-                    style={timeframe === tf
-                      ? { background: '#F59E0B', color: '#080a0e' }
-                      : { color: '#64748b' }}
-                  >
-                    {tf}
-                  </button>
-                ))}
-              </div>
-
-              {/* Divider — desktop only */}
-              <div className="w-px h-5 hidden md:block" style={{ background: '#1e2d42' }} />
+              {/* Divider + timeframe strip — desktop only */}
+              {!isMobile && (
+                <>
+                  <div style={{ width: 1, height: 20, background: '#1e2d42', flexShrink: 0 }} />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 2, borderRadius: 8, padding: 2, background: '#162030', flexShrink: 0 }}>
+                    {TIMEFRAMES.map(tf => (
+                      <button
+                        key={tf}
+                        onClick={() => setTimeframe(tf)}
+                        style={{
+                          fontSize: 11, fontFamily: 'monospace', fontWeight: 600,
+                          padding: '4px 10px', borderRadius: 6, cursor: 'pointer',
+                          border: 'none', whiteSpace: 'nowrap',
+                          background: timeframe === tf ? '#F59E0B' : 'transparent',
+                          color: timeframe === tf ? '#080a0e' : '#64748b',
+                        }}
+                      >
+                        {tf}
+                      </button>
+                    ))}
+                  </div>
+                  <div style={{ width: 1, height: 20, background: '#1e2d42', flexShrink: 0 }} />
+                </>
+              )}
 
               {/* Cue panel toggle — always visible */}
               <button
@@ -387,34 +415,38 @@ const ChartsPage = () => {
                   : { background: 'transparent', color: '#64748b', borderColor: '#1e2d42' }}
               >
                 <i className="ri-layout-right-line text-xs" />
-                <span className="hidden sm:inline">Cue Panel</span>
+                {!isMobile && <span>Cue Panel</span>}
               </button>
             </div>
           </div>
 
           {/* ── Toolbar Row 2 — mobile timeframe strip ── */}
-          <div
-            className="md:hidden flex-shrink-0 px-3 py-2 flex items-center gap-2 border-b overflow-x-auto"
-            style={{ background: '#0d1420', borderColor: '#1e2d42' }}
-          >
-            <div className="flex items-center gap-0.5 rounded-lg p-0.5 flex-shrink-0" style={{ background: '#162030' }}>
-              {TIMEFRAMES.map(tf => (
-                <button
-                  key={tf}
-                  onClick={() => setTimeframe(tf)}
-                  className="text-xs px-2.5 py-1 rounded-md cursor-pointer transition-all whitespace-nowrap font-mono font-semibold"
-                  style={timeframe === tf
-                    ? { background: '#F59E0B', color: '#080a0e' }
-                    : { color: '#64748b' }}
-                >
-                  {tf}
-                </button>
-              ))}
+          {isMobile && (
+            <div
+              style={{ flexShrink: 0, padding: '6px 12px', display: 'flex', alignItems: 'center', gap: 8, borderBottom: '1px solid #1e2d42', overflowX: 'auto', background: '#0d1420' }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 2, borderRadius: 8, padding: 2, background: '#162030', flexShrink: 0 }}>
+                {TIMEFRAMES.map(tf => (
+                  <button
+                    key={tf}
+                    onClick={() => setTimeframe(tf)}
+                    style={{
+                      fontSize: 11, fontFamily: 'monospace', fontWeight: 600,
+                      padding: '4px 10px', borderRadius: 6, cursor: 'pointer',
+                      border: 'none', whiteSpace: 'nowrap',
+                      background: timeframe === tf ? '#F59E0B' : 'transparent',
+                      color: timeframe === tf ? '#080a0e' : '#64748b',
+                    }}
+                  >
+                    {tf}
+                  </button>
+                ))}
+              </div>
+              <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: '#475569', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                <i className="ri-database-2-line" /> {error ? 'Mock' : 'Twelve Data'}
+              </span>
             </div>
-            <span className="ml-auto flex items-center gap-1 text-xs text-slate-600 whitespace-nowrap flex-shrink-0">
-              <i className="ri-database-2-line" /> {error ? 'Mock' : 'Twelve Data'}
-            </span>
-          </div>
+          )}
 
           {/* ── Chart + Signal Panel ── */}
           <div className="flex-1 flex overflow-hidden relative">
@@ -452,13 +484,23 @@ const ChartsPage = () => {
             {showSignalPanel && (
               <>
                 {/* Mobile backdrop */}
+                {/* Mobile backdrop */}
+                {isMobile && (
+                  <div
+                    style={{ position: 'absolute', inset: 0, zIndex: 30, background: 'rgba(0,0,0,0.45)' }}
+                    onClick={() => setShowSignalPanel(false)}
+                  />
+                )}
                 <div
-                  className="fixed inset-0 z-30 bg-black/40 md:hidden"
-                  onClick={() => setShowSignalPanel(false)}
-                />
-                <div
-                  className="fixed md:relative inset-y-0 right-0 z-40 w-72 md:w-64 flex-shrink-0 flex flex-col overflow-hidden border-l"
-                  style={{ background: '#0d1420', borderColor: '#1e2d42' }}
+                  style={{
+                    display: 'flex', flexDirection: 'column', overflow: 'hidden', flexShrink: 0,
+                    width: isMobile ? Math.min(288, windowWidth - 40) : 256,
+                    position: isMobile ? 'absolute' : 'relative',
+                    top: 0, bottom: 0, right: 0,
+                    zIndex: isMobile ? 40 : 'auto',
+                    background: '#0d1420',
+                    borderLeft: '1px solid #1e2d42',
+                  }}
                 >
                   {/* Panel header */}
                   <div className="px-4 py-3 border-b" style={{ borderColor: '#1e2d42' }}>
@@ -472,7 +514,7 @@ const ChartsPage = () => {
                         {/* Close button — mobile only */}
                         <button
                           onClick={() => setShowSignalPanel(false)}
-                          className="md:hidden text-slate-400 hover:text-white text-lg leading-none"
+                          style={{ display: isMobile ? 'block' : 'none', color: '#94a3b8', fontSize: 18, lineHeight: 1, background: 'none', border: 'none', cursor: 'pointer' }}
                         >
                           <i className="ri-close-line" />
                         </button>
@@ -727,9 +769,15 @@ const ChartsPage = () => {
           </div>
 
           {/* ── Bottom indicator status bar — desktop only ── */}
+          {/* Bottom status bar — desktop only */}
           <div
-            className="hidden md:flex flex-shrink-0 px-4 py-1.5 items-center gap-5 text-xs border-t overflow-x-auto"
-            style={{ background: '#0d1420', borderColor: '#1e2d42' }}
+            style={{
+              display: isMobile ? 'none' : 'flex',
+              flexShrink: 0, padding: '6px 16px',
+              alignItems: 'center', gap: 20, fontSize: 12,
+              borderTop: '1px solid #1e2d42', overflowX: 'auto',
+              background: '#0d1420',
+            }}
           >
             {rsiVal !== null && (
               <span className="flex items-center gap-1.5 whitespace-nowrap">
