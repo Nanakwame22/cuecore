@@ -53,6 +53,7 @@ const ChartsPage = () => {
   const [searchQuery,      setSearchQuery]      = useState('');
   const [activeTab,        setActiveTab]        = useState<'signal' | 'levels'>('signal');
   const [upgradeModal,     setUpgradeModal]     = useState<{ open: boolean; feature: string }>({ open: false, feature: '' });
+  const [showMobileSidebar, setShowMobileSidebar] = useState(false);
   const chartOptionsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -124,84 +125,114 @@ const ChartsPage = () => {
       <div className="flex h-full overflow-hidden" style={{ background: '#080a0e' }}>
 
         {/* ── Instrument Sidebar ─────────────────────────────────────────── */}
-        <div
-          className="w-52 flex-shrink-0 flex flex-col overflow-hidden border-r"
-          style={{ background: '#0d1420', borderColor: '#1e2d42' }}
-        >
-          {/* Search */}
-          <div className="px-3 py-3 border-b" style={{ borderColor: '#1e2d42' }}>
-            <div className="relative">
-              <i className="ri-search-line absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500 text-xs" />
-              <input
-                type="text"
-                placeholder="Search symbol…"
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                className="w-full pl-7 pr-3 py-1.5 text-xs rounded-md text-slate-300 placeholder-slate-600 focus:outline-none focus:ring-1"
-                style={{ background: '#162030', border: '1px solid #1e2d42', '--tw-ring-color': '#F59E0B' } as React.CSSProperties}
-              />
+        <>
+          {/* Mobile backdrop */}
+          {showMobileSidebar && (
+            <div
+              className="fixed inset-0 z-40 bg-black/60 md:hidden"
+              onClick={() => setShowMobileSidebar(false)}
+            />
+          )}
+
+          <div
+            className={`fixed md:relative inset-y-0 left-0 z-50 w-64 md:w-52 flex-shrink-0 flex flex-col overflow-hidden border-r transition-transform duration-300 ${showMobileSidebar ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0`}
+            style={{ background: '#0d1420', borderColor: '#1e2d42' }}
+          >
+            {/* Mobile close button */}
+            <div className="md:hidden flex items-center justify-between px-3 py-2 border-b" style={{ borderColor: '#1e2d42' }}>
+              <span className="text-xs font-bold text-white uppercase tracking-widest">Instruments</span>
+              <button
+                onClick={() => setShowMobileSidebar(false)}
+                className="text-slate-400 hover:text-white text-lg leading-none"
+              >
+                <i className="ri-close-line" />
+              </button>
+            </div>
+
+            {/* Search */}
+            <div className="px-3 py-3 border-b" style={{ borderColor: '#1e2d42' }}>
+              <div className="relative">
+                <i className="ri-search-line absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500 text-xs" />
+                <input
+                  type="text"
+                  placeholder="Search symbol…"
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  className="w-full pl-7 pr-3 py-1.5 text-xs rounded-md text-slate-300 placeholder-slate-600 focus:outline-none focus:ring-1"
+                  style={{ background: '#162030', border: '1px solid #1e2d42', '--tw-ring-color': '#F59E0B' } as React.CSSProperties}
+                />
+              </div>
+            </div>
+
+            {/* Asset list */}
+            <div className="flex-1 overflow-y-auto">
+              {filteredAssets.map(asset => {
+                const isActive = asset.id === selectedId;
+                const up = asset.change >= 0;
+                return (
+                  <button
+                    key={asset.id}
+                    onClick={() => { setSelectedId(asset.id); setShowMobileSidebar(false); }}
+                    className="w-full px-3 py-2.5 text-left cursor-pointer transition-all border-l-2"
+                    style={{
+                      background: isActive ? 'rgba(245,158,11,0.07)' : 'transparent',
+                      borderLeftColor: isActive ? '#F59E0B' : 'transparent',
+                    }}
+                    onMouseEnter={e => { if (!isActive) (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.03)'; }}
+                    onMouseLeave={e => { if (!isActive) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className={`text-xs font-mono font-bold ${isActive ? 'text-[#F59E0B]' : 'text-slate-300'}`}>
+                        {asset.symbol}
+                      </span>
+                      <span className={`text-xs font-mono ${up ? 'text-[#00D084]' : 'text-[#FF4D4D]'}`}>
+                        {formatChange(asset.change)}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between mt-0.5">
+                      <span className="text-xs text-slate-600 truncate">{asset.name}</span>
+                      <span className={`text-xs ${sectorColor(asset.sector)}`}>{asset.sector}</span>
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           </div>
-
-          {/* Asset list */}
-          <div className="flex-1 overflow-y-auto">
-            {filteredAssets.map(asset => {
-              const isActive = asset.id === selectedId;
-              const up = asset.change >= 0;
-              return (
-                <button
-                  key={asset.id}
-                  onClick={() => setSelectedId(asset.id)}
-                  className="w-full px-3 py-2.5 text-left cursor-pointer transition-all border-l-2"
-                  style={{
-                    background: isActive ? 'rgba(245,158,11,0.07)' : 'transparent',
-                    borderLeftColor: isActive ? '#F59E0B' : 'transparent',
-                  }}
-                  onMouseEnter={e => { if (!isActive) (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.03)'; }}
-                  onMouseLeave={e => { if (!isActive) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className={`text-xs font-mono font-bold ${isActive ? 'text-[#F59E0B]' : 'text-slate-300'}`}>
-                      {asset.symbol}
-                    </span>
-                    <span className={`text-xs font-mono ${up ? 'text-[#00D084]' : 'text-[#FF4D4D]'}`}>
-                      {formatChange(asset.change)}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between mt-0.5">
-                    <span className="text-xs text-slate-600 truncate">{asset.name}</span>
-                    <span className={`text-xs ${sectorColor(asset.sector)}`}>{asset.sector}</span>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </div>
+        </>
 
         {/* ── Main Chart Area ───────────────────────────────────────────── */}
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
 
-          {/* ── Toolbar ── */}
+          {/* ── Toolbar Row 1 ── */}
           <div
-            className="px-4 py-2.5 flex items-center gap-3 flex-shrink-0 border-b flex-wrap"
+            className="px-3 md:px-4 py-2.5 flex items-center gap-2 md:gap-3 flex-shrink-0 border-b"
             style={{ background: '#0d1420', borderColor: '#1e2d42' }}
           >
+            {/* Hamburger — mobile only */}
+            <button
+              onClick={() => setShowMobileSidebar(true)}
+              className="md:hidden text-slate-400 hover:text-white flex items-center justify-center w-8 h-8 rounded-md"
+              style={{ background: 'transparent' }}
+            >
+              <i className="ri-menu-line text-base" />
+            </button>
+
             {/* Asset info */}
-            <div className="flex items-center gap-3">
-              <div>
+            <div className="flex items-center gap-2 md:gap-3 min-w-0">
+              <div className="min-w-0">
                 <span className="font-mono font-bold text-white text-sm">{selectedAsset.symbol}</span>
                 <span className="text-slate-500 text-xs ml-1.5 hidden sm:inline">{selectedAsset.name}</span>
               </div>
-              <span className="text-base font-mono font-bold text-white">
+              <span className="text-base font-mono font-bold text-white whitespace-nowrap">
                 {loading ? '—' : formatPrice(lastPrice)}
               </span>
-              <span className={`text-xs font-mono font-semibold ${priceChange >= 0 ? 'text-[#00D084]' : 'text-[#FF4D4D]'}`}>
+              <span className={`text-xs font-mono font-semibold whitespace-nowrap ${priceChange >= 0 ? 'text-[#00D084]' : 'text-[#FF4D4D]'}`}>
                 {formatChange(priceChange)}
               </span>
               {/* Direction badge */}
               {matchedCue && (
                 <span
-                  className="text-xs px-2 py-0.5 rounded-full font-mono font-bold border"
+                  className="text-xs px-2 py-0.5 rounded-full font-mono font-bold border whitespace-nowrap"
                   style={
                     matchedCue.direction === 'BUY'
                       ? { color: '#00D084', borderColor: 'rgba(0,208,132,0.3)', background: 'rgba(0,208,132,0.1)' }
@@ -214,18 +245,18 @@ const ChartsPage = () => {
                 </span>
               )}
               {loading && (
-                <span className="text-xs text-slate-500 flex items-center gap-1">
-                  <i className="ri-loader-4-line animate-spin" /> Loading…
+                <span className="text-xs text-slate-500 flex items-center gap-1 whitespace-nowrap">
+                  <i className="ri-loader-4-line animate-spin" /> <span className="hidden sm:inline">Loading…</span>
                 </span>
               )}
               {error && (
-                <span className="text-xs text-[#FF4D4D] flex items-center gap-1">
-                  <i className="ri-wifi-off-line" /> API error — showing mock
+                <span className="text-xs text-[#FF4D4D] flex items-center gap-1 whitespace-nowrap">
+                  <i className="ri-wifi-off-line" /> <span className="hidden sm:inline">API error — showing mock</span>
                 </span>
               )}
             </div>
 
-            <div className="ml-auto flex items-center gap-2 flex-wrap">
+            <div className="ml-auto flex items-center gap-2">
 
               {/* Chart type + settings dropdown */}
               <div className="relative" ref={chartOptionsRef}>
@@ -237,13 +268,13 @@ const ChartsPage = () => {
                     : { background: 'transparent', color: '#94a3b8', borderColor: '#1e2d42' }}
                 >
                   <i className={`${CHART_TYPES.find(c => c.key === chartType)?.icon ?? 'ri-bar-chart-box-line'} text-xs`} />
-                  {CHART_TYPES.find(c => c.key === chartType)?.label}
+                  <span className="hidden sm:inline">{CHART_TYPES.find(c => c.key === chartType)?.label}</span>
                   <i className={`${showChartOptions ? 'ri-arrow-up-s-line' : 'ri-arrow-down-s-line'} text-xs`} />
                 </button>
 
                 {showChartOptions && (
                   <div
-                    className="absolute top-full left-0 mt-2 z-50 w-80 rounded-xl border overflow-hidden"
+                    className="absolute top-full right-0 md:left-0 mt-2 z-50 w-80 rounded-xl border overflow-hidden"
                     style={{ background: '#0d1420', borderColor: '#1e2d42', boxShadow: '0 16px 48px rgba(0,0,0,0.6)' }}
                   >
                     {/* Chart types */}
@@ -325,11 +356,11 @@ const ChartsPage = () => {
                 )}
               </div>
 
-              {/* Divider */}
-              <div className="w-px h-5" style={{ background: '#1e2d42' }} />
+              {/* Divider — desktop only */}
+              <div className="w-px h-5 hidden md:block" style={{ background: '#1e2d42' }} />
 
-              {/* Quick timeframe strip */}
-              <div className="flex items-center gap-0.5 rounded-lg p-0.5" style={{ background: '#162030' }}>
+              {/* Quick timeframe strip — desktop only */}
+              <div className="hidden md:flex items-center gap-0.5 rounded-lg p-0.5" style={{ background: '#162030' }}>
                 {TIMEFRAMES.map(tf => (
                   <button
                     key={tf}
@@ -344,9 +375,10 @@ const ChartsPage = () => {
                 ))}
               </div>
 
-              <div className="w-px h-5" style={{ background: '#1e2d42' }} />
+              {/* Divider — desktop only */}
+              <div className="w-px h-5 hidden md:block" style={{ background: '#1e2d42' }} />
 
-              {/* Cue panel toggle */}
+              {/* Cue panel toggle — always visible */}
               <button
                 onClick={() => setShowSignalPanel(v => !v)}
                 className="text-xs px-2.5 py-1.5 rounded-md cursor-pointer transition-all font-mono font-semibold border flex items-center gap-1.5"
@@ -355,13 +387,37 @@ const ChartsPage = () => {
                   : { background: 'transparent', color: '#64748b', borderColor: '#1e2d42' }}
               >
                 <i className="ri-layout-right-line text-xs" />
-                Cue Panel
+                <span className="hidden sm:inline">Cue Panel</span>
               </button>
             </div>
           </div>
 
+          {/* ── Toolbar Row 2 — mobile timeframe strip ── */}
+          <div
+            className="md:hidden flex-shrink-0 px-3 py-2 flex items-center gap-2 border-b overflow-x-auto"
+            style={{ background: '#0d1420', borderColor: '#1e2d42' }}
+          >
+            <div className="flex items-center gap-0.5 rounded-lg p-0.5 flex-shrink-0" style={{ background: '#162030' }}>
+              {TIMEFRAMES.map(tf => (
+                <button
+                  key={tf}
+                  onClick={() => setTimeframe(tf)}
+                  className="text-xs px-2.5 py-1 rounded-md cursor-pointer transition-all whitespace-nowrap font-mono font-semibold"
+                  style={timeframe === tf
+                    ? { background: '#F59E0B', color: '#080a0e' }
+                    : { color: '#64748b' }}
+                >
+                  {tf}
+                </button>
+              ))}
+            </div>
+            <span className="ml-auto flex items-center gap-1 text-xs text-slate-600 whitespace-nowrap flex-shrink-0">
+              <i className="ri-database-2-line" /> {error ? 'Mock' : 'Twelve Data'}
+            </span>
+          </div>
+
           {/* ── Chart + Signal Panel ── */}
-          <div className="flex-1 flex overflow-hidden">
+          <div className="flex-1 flex overflow-hidden relative">
 
             {/* Chart canvas */}
             <div className="flex-1 relative overflow-hidden" style={{ background: '#080a0e', padding: '12px 12px 12px 12px' }}>
@@ -394,269 +450,285 @@ const ChartsPage = () => {
 
             {/* ── Cue Engine Signal Panel ── */}
             {showSignalPanel && (
-              <div
-                className="w-64 flex-shrink-0 flex flex-col overflow-hidden border-l"
-                style={{ background: '#0d1420', borderColor: '#1e2d42' }}
-              >
-                {/* Panel header */}
-                <div className="px-4 py-3 border-b" style={{ borderColor: '#1e2d42' }}>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: '#F59E0B' }} />
-                      <span className="text-xs font-bold text-white tracking-widest uppercase">Cue Engine</span>
+              <>
+                {/* Mobile backdrop */}
+                <div
+                  className="fixed inset-0 z-30 bg-black/40 md:hidden"
+                  onClick={() => setShowSignalPanel(false)}
+                />
+                <div
+                  className="fixed md:relative inset-y-0 right-0 z-40 w-72 md:w-64 flex-shrink-0 flex flex-col overflow-hidden border-l"
+                  style={{ background: '#0d1420', borderColor: '#1e2d42' }}
+                >
+                  {/* Panel header */}
+                  <div className="px-4 py-3 border-b" style={{ borderColor: '#1e2d42' }}>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: '#F59E0B' }} />
+                        <span className="text-xs font-bold text-white tracking-widest uppercase">Cue Engine</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-slate-500 font-mono">{selectedAsset.symbol}</span>
+                        {/* Close button — mobile only */}
+                        <button
+                          onClick={() => setShowSignalPanel(false)}
+                          className="md:hidden text-slate-400 hover:text-white text-lg leading-none"
+                        >
+                          <i className="ri-close-line" />
+                        </button>
+                      </div>
                     </div>
-                    <span className="text-xs text-slate-500 font-mono">{selectedAsset.symbol}</span>
                   </div>
-                </div>
 
-                {/* Tabs */}
-                <div className="flex border-b" style={{ borderColor: '#1e2d42' }}>
-                  {(['signal', 'levels'] as const).map(tab => (
-                    <button
-                      key={tab}
-                      onClick={() => setActiveTab(tab)}
-                      className="flex-1 py-2 text-xs font-semibold cursor-pointer transition-all capitalize border-b-2"
-                      style={activeTab === tab
-                        ? { color: '#F59E0B', borderBottomColor: '#F59E0B', background: 'rgba(245,158,11,0.05)' }
-                        : { color: '#475569', borderBottomColor: 'transparent' }}
-                    >
-                      {tab === 'signal' ? 'Signal' : 'Levels'}
-                    </button>
-                  ))}
-                </div>
+                  {/* Tabs */}
+                  <div className="flex border-b" style={{ borderColor: '#1e2d42' }}>
+                    {(['signal', 'levels'] as const).map(tab => (
+                      <button
+                        key={tab}
+                        onClick={() => setActiveTab(tab)}
+                        className="flex-1 py-2 text-xs font-semibold cursor-pointer transition-all capitalize border-b-2"
+                        style={activeTab === tab
+                          ? { color: '#F59E0B', borderBottomColor: '#F59E0B', background: 'rgba(245,158,11,0.05)' }
+                          : { color: '#475569', borderBottomColor: 'transparent' }}
+                      >
+                        {tab === 'signal' ? 'Signal' : 'Levels'}
+                      </button>
+                    ))}
+                  </div>
 
-                <div className="flex-1 overflow-y-auto">
+                  <div className="flex-1 overflow-y-auto">
 
-                  {/* ── Signal tab ── */}
-                  {activeTab === 'signal' && (
-                    <div className="p-4 space-y-4">
-                      {matchedCue ? (
-                        <>
-                          {/* Direction card */}
-                          <div
-                            className="rounded-xl p-4 border"
-                            style={
-                              matchedCue.direction === 'BUY'
-                                ? { background: 'rgba(0,208,132,0.07)', borderColor: 'rgba(0,208,132,0.25)' }
-                                : matchedCue.direction === 'SELL'
-                                ? { background: 'rgba(255,77,77,0.07)', borderColor: 'rgba(255,77,77,0.25)' }
-                                : { background: 'rgba(245,158,11,0.07)', borderColor: 'rgba(245,158,11,0.25)' }
-                            }
-                          >
-                            <div className="flex items-center justify-between mb-3">
-                              <div className="flex items-center gap-2">
-                                <div
-                                  className="w-2 h-2 rounded-full"
-                                  style={{ background: matchedCue.direction === 'BUY' ? '#00D084' : matchedCue.direction === 'SELL' ? '#FF4D4D' : '#F59E0B' }}
-                                />
-                                <span
-                                  className="text-lg font-bold font-mono"
-                                  style={{ color: matchedCue.direction === 'BUY' ? '#00D084' : matchedCue.direction === 'SELL' ? '#FF4D4D' : '#F59E0B' }}
-                                >
-                                  {matchedCue.direction}
-                                </span>
-                              </div>
-                              <div className="text-right">
-                                <div className="text-xs text-slate-500">Confidence</div>
-                                <div
-                                  className="text-base font-bold font-mono"
-                                  style={{ color: matchedCue.direction === 'BUY' ? '#00D084' : matchedCue.direction === 'SELL' ? '#FF4D4D' : '#F59E0B' }}
-                                >
-                                  {matchedCue.confidence}%
-                                </div>
-                              </div>
-                            </div>
-                            {/* Confidence bar */}
-                            <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.08)' }}>
-                              <div
-                                className="h-full rounded-full transition-all"
-                                style={{
-                                  width: `${matchedCue.confidence}%`,
-                                  background: matchedCue.direction === 'BUY' ? '#00D084' : matchedCue.direction === 'SELL' ? '#FF4D4D' : '#F59E0B',
-                                }}
-                              />
-                            </div>
-                            <div className="flex justify-between mt-1.5">
-                              <span className="text-xs text-slate-500">TF: {matchedCue.timeframe}</span>
-                              <span className="text-xs text-slate-500">{timeframe} view</span>
-                            </div>
-                          </div>
-
-                          {/* Trade levels */}
-                          <div className="space-y-0">
-                            {[
-                              { dot: '#60A5FA', label: 'Entry',     value: matchedCue.entry,     pct: null },
-                              { dot: '#00D084', label: 'Target',    value: matchedCue.target,    pct: rewardPct !== null ? `+${rewardPct.toFixed(1)}%` : null },
-                              { dot: '#FF4D4D', label: 'Stop Loss', value: matchedCue.stopLoss,  pct: riskPct !== null ? `-${riskPct.toFixed(1)}%` : null },
-                            ].map(row => (
-                              <div
-                                key={row.label}
-                                className="flex items-center justify-between py-2.5 border-b"
-                                style={{ borderColor: '#1e2d42' }}
-                              >
+                    {/* ── Signal tab ── */}
+                    {activeTab === 'signal' && (
+                      <div className="p-4 space-y-4">
+                        {matchedCue ? (
+                          <>
+                            {/* Direction card */}
+                            <div
+                              className="rounded-xl p-4 border"
+                              style={
+                                matchedCue.direction === 'BUY'
+                                  ? { background: 'rgba(0,208,132,0.07)', borderColor: 'rgba(0,208,132,0.25)' }
+                                  : matchedCue.direction === 'SELL'
+                                  ? { background: 'rgba(255,77,77,0.07)', borderColor: 'rgba(255,77,77,0.25)' }
+                                  : { background: 'rgba(245,158,11,0.07)', borderColor: 'rgba(245,158,11,0.25)' }
+                              }
+                            >
+                              <div className="flex items-center justify-between mb-3">
                                 <div className="flex items-center gap-2">
-                                  <div className="w-2 h-2 rounded-full" style={{ background: row.dot }} />
-                                  <span className="text-xs text-slate-500">{row.label}</span>
+                                  <div
+                                    className="w-2 h-2 rounded-full"
+                                    style={{ background: matchedCue.direction === 'BUY' ? '#00D084' : matchedCue.direction === 'SELL' ? '#FF4D4D' : '#F59E0B' }}
+                                  />
+                                  <span
+                                    className="text-lg font-bold font-mono"
+                                    style={{ color: matchedCue.direction === 'BUY' ? '#00D084' : matchedCue.direction === 'SELL' ? '#FF4D4D' : '#F59E0B' }}
+                                  >
+                                    {matchedCue.direction}
+                                  </span>
                                 </div>
                                 <div className="text-right">
-                                  <div className="text-xs font-mono font-bold text-slate-200">{formatPrice(row.value)}</div>
-                                  {row.pct && (
-                                    <div className="text-xs font-mono" style={{ color: row.dot }}>{row.pct}</div>
-                                  )}
+                                  <div className="text-xs text-slate-500">Confidence</div>
+                                  <div
+                                    className="text-base font-bold font-mono"
+                                    style={{ color: matchedCue.direction === 'BUY' ? '#00D084' : matchedCue.direction === 'SELL' ? '#FF4D4D' : '#F59E0B' }}
+                                  >
+                                    {matchedCue.confidence}%
+                                  </div>
                                 </div>
                               </div>
-                            ))}
-                          </div>
+                              {/* Confidence bar */}
+                              <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.08)' }}>
+                                <div
+                                  className="h-full rounded-full transition-all"
+                                  style={{
+                                    width: `${matchedCue.confidence}%`,
+                                    background: matchedCue.direction === 'BUY' ? '#00D084' : matchedCue.direction === 'SELL' ? '#FF4D4D' : '#F59E0B',
+                                  }}
+                                />
+                              </div>
+                              <div className="flex justify-between mt-1.5">
+                                <span className="text-xs text-slate-500">TF: {matchedCue.timeframe}</span>
+                                <span className="text-xs text-slate-500">{timeframe} view</span>
+                              </div>
+                            </div>
 
-                          {/* R/R ratio */}
-                          <div className="rounded-xl p-3 border" style={{ background: '#162030', borderColor: '#1e2d42' }}>
-                            <div className="flex items-center justify-between mb-2">
-                              <span className="text-xs text-slate-500 font-semibold">Risk / Reward</span>
-                              <span className="text-sm font-bold font-mono" style={{ color: '#F59E0B' }}>
-                                {matchedCue.riskReward.toFixed(1)}:1
+                            {/* Trade levels */}
+                            <div className="space-y-0">
+                              {[
+                                { dot: '#60A5FA', label: 'Entry',     value: matchedCue.entry,     pct: null },
+                                { dot: '#00D084', label: 'Target',    value: matchedCue.target,    pct: rewardPct !== null ? `+${rewardPct.toFixed(1)}%` : null },
+                                { dot: '#FF4D4D', label: 'Stop Loss', value: matchedCue.stopLoss,  pct: riskPct !== null ? `-${riskPct.toFixed(1)}%` : null },
+                              ].map(row => (
+                                <div
+                                  key={row.label}
+                                  className="flex items-center justify-between py-2.5 border-b"
+                                  style={{ borderColor: '#1e2d42' }}
+                                >
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-2 h-2 rounded-full" style={{ background: row.dot }} />
+                                    <span className="text-xs text-slate-500">{row.label}</span>
+                                  </div>
+                                  <div className="text-right">
+                                    <div className="text-xs font-mono font-bold text-slate-200">{formatPrice(row.value)}</div>
+                                    {row.pct && (
+                                      <div className="text-xs font-mono" style={{ color: row.dot }}>{row.pct}</div>
+                                    )}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+
+                            {/* R/R ratio */}
+                            <div className="rounded-xl p-3 border" style={{ background: '#162030', borderColor: '#1e2d42' }}>
+                              <div className="flex items-center justify-between mb-2">
+                                <span className="text-xs text-slate-500 font-semibold">Risk / Reward</span>
+                                <span className="text-sm font-bold font-mono" style={{ color: '#F59E0B' }}>
+                                  {matchedCue.riskReward.toFixed(1)}:1
+                                </span>
+                              </div>
+                              <div className="flex gap-0.5 h-2 rounded-full overflow-hidden">
+                                <div className="rounded-l-full" style={{ background: '#FF4D4D', width: `${100 / (matchedCue.riskReward + 1)}%` }} />
+                                <div className="rounded-r-full flex-1" style={{ background: '#00D084' }} />
+                              </div>
+                              <div className="flex justify-between mt-1">
+                                <span className="text-xs" style={{ color: '#FF4D4D' }}>Risk</span>
+                                <span className="text-xs" style={{ color: '#00D084' }}>Reward</span>
+                              </div>
+                            </div>
+
+                            {/* AI reasoning */}
+                            <div>
+                              <div className="text-xs font-semibold text-slate-500 mb-2 uppercase tracking-wide">AI Reasoning</div>
+                              <div
+                                className="text-xs text-slate-400 leading-relaxed rounded-lg p-3 border"
+                                style={{ background: '#162030', borderColor: '#1e2d42' }}
+                              >
+                                {matchedCue.direction === 'BUY'
+                                  ? `Bullish momentum confirmed. RSI in preferred buy zone${rsiVal !== null ? ` (${rsiVal.toFixed(0)})` : ''}. MACD ${macdBullish ? 'bullish histogram' : 'diverging'}. ${emaCross ? `EMA9 vs EMA21: ${emaCross}.` : ''} Key support at ${formatPrice(matchedCue.stopLoss)}.`
+                                  : matchedCue.direction === 'SELL'
+                                  ? `Bearish pressure building. RSI${rsiVal !== null ? ` at ${rsiVal.toFixed(0)}` : ''} shows exhaustion. MACD ${!macdBullish ? 'bearish' : 'weakening'}. ${emaCross ? `EMA cross: ${emaCross}.` : ''} Target: ${formatPrice(matchedCue.target)}.`
+                                  : `Consolidation phase. No clear directional bias. Watching ${formatPrice(matchedCue.target)} resistance and ${formatPrice(matchedCue.stopLoss)} support.`
+                                }
+                              </div>
+                            </div>
+                          </>
+                        ) : (
+                          <div className="text-center py-10">
+                            <div
+                              className="w-12 h-12 flex items-center justify-center mx-auto mb-3 rounded-full"
+                              style={{ background: '#162030' }}
+                            >
+                              <i className="ri-radar-line text-slate-500 text-xl" />
+                            </div>
+                            <div className="text-xs text-slate-500">No active signal</div>
+                            <div className="text-xs text-slate-600 mt-1">Cue Engine scanning…</div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* ── Levels tab (real indicator values) ── */}
+                    {activeTab === 'levels' && (
+                      <div className="p-4 space-y-4">
+
+                        {/* Real indicators */}
+                        <div>
+                          <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Live Indicators</div>
+                          <div className="space-y-0">
+                            {/* RSI */}
+                            <div className="flex items-center justify-between py-2.5 border-b" style={{ borderColor: '#1e2d42' }}>
+                              <div>
+                                <div className="text-xs text-slate-400">RSI (14)</div>
+                                <div className="text-xs text-slate-600">{rsiZone?.label ?? '—'}</div>
+                              </div>
+                              <span className={`text-xs font-mono font-bold ${rsiZone?.color ?? 'text-slate-500'}`}>
+                                {rsiVal !== null ? rsiVal.toFixed(1) : loading ? '…' : '—'}
                               </span>
                             </div>
-                            <div className="flex gap-0.5 h-2 rounded-full overflow-hidden">
-                              <div className="rounded-l-full" style={{ background: '#FF4D4D', width: `${100 / (matchedCue.riskReward + 1)}%` }} />
-                              <div className="rounded-r-full flex-1" style={{ background: '#00D084' }} />
+                            {/* MACD */}
+                            <div className="flex items-center justify-between py-2.5 border-b" style={{ borderColor: '#1e2d42' }}>
+                              <div>
+                                <div className="text-xs text-slate-400">MACD Hist.</div>
+                                <div className="text-xs text-slate-600">{indicators.macdHistogram !== null ? (macdBullish ? 'Bullish' : 'Bearish') : '—'}</div>
+                              </div>
+                              <span
+                                className="text-xs font-mono font-bold"
+                                style={{ color: indicators.macdHistogram !== null ? (macdBullish ? '#00D084' : '#FF4D4D') : '#475569' }}
+                              >
+                                {indicators.macdHistogram !== null
+                                  ? (indicators.macdHistogram >= 0 ? '+' : '') + indicators.macdHistogram.toFixed(4)
+                                  : loading ? '…' : '—'}
+                              </span>
                             </div>
-                            <div className="flex justify-between mt-1">
-                              <span className="text-xs" style={{ color: '#FF4D4D' }}>Risk</span>
-                              <span className="text-xs" style={{ color: '#00D084' }}>Reward</span>
+                            {/* EMA cross */}
+                            <div className="flex items-center justify-between py-2.5 border-b" style={{ borderColor: '#1e2d42' }}>
+                              <div>
+                                <div className="text-xs text-slate-400">EMA 9 / 21</div>
+                                <div className="text-xs text-slate-600">{emaCross ?? '—'}</div>
+                              </div>
+                              <span
+                                className="text-xs font-mono font-bold"
+                                style={{ color: emaCross === 'Bullish' ? '#00D084' : emaCross === 'Bearish' ? '#FF4D4D' : '#475569' }}
+                              >
+                                {emaCross ?? (loading ? '…' : '—')}
+                              </span>
+                            </div>
+                            {/* ATR */}
+                            <div className="flex items-center justify-between py-2.5 border-b" style={{ borderColor: '#1e2d42' }}>
+                              <div>
+                                <div className="text-xs text-slate-400">ATR (14)</div>
+                                <div className="text-xs text-slate-600">Avg Range</div>
+                              </div>
+                              <span className="text-xs font-mono font-bold text-slate-400">
+                                {indicators.atr !== null ? formatPrice(indicators.atr) : loading ? '…' : '—'}
+                              </span>
+                            </div>
+                            {/* EMA9 value */}
+                            <div className="flex items-center justify-between py-2.5 border-b" style={{ borderColor: '#1e2d42' }}>
+                              <div>
+                                <div className="text-xs text-slate-400">EMA 9</div>
+                                <div className="text-xs text-slate-600">Fast MA</div>
+                              </div>
+                              <span className="text-xs font-mono font-bold text-slate-400">
+                                {indicators.ema9 !== null ? formatPrice(indicators.ema9) : loading ? '…' : '—'}
+                              </span>
+                            </div>
+                            {/* EMA21 value */}
+                            <div className="flex items-center justify-between py-2.5">
+                              <div>
+                                <div className="text-xs text-slate-400">EMA 21</div>
+                                <div className="text-xs text-slate-600">Slow MA</div>
+                              </div>
+                              <span className="text-xs font-mono font-bold text-slate-400">
+                                {indicators.ema21 !== null ? formatPrice(indicators.ema21) : loading ? '…' : '—'}
+                              </span>
                             </div>
                           </div>
+                        </div>
 
-                          {/* AI reasoning */}
+                        {/* Bollinger (premium only) */}
+                        <div
+                          className="rounded-xl p-3 border flex items-center gap-3"
+                          style={{ background: 'rgba(245,158,11,0.04)', borderColor: 'rgba(245,158,11,0.15)' }}
+                        >
+                          <i className="ri-lock-2-line text-sm" style={{ color: '#F59E0B' }} />
                           <div>
-                            <div className="text-xs font-semibold text-slate-500 mb-2 uppercase tracking-wide">AI Reasoning</div>
-                            <div
-                              className="text-xs text-slate-400 leading-relaxed rounded-lg p-3 border"
-                              style={{ background: '#162030', borderColor: '#1e2d42' }}
-                            >
-                              {matchedCue.direction === 'BUY'
-                                ? `Bullish momentum confirmed. RSI in preferred buy zone${rsiVal !== null ? ` (${rsiVal.toFixed(0)})` : ''}. MACD ${macdBullish ? 'bullish histogram' : 'diverging'}. ${emaCross ? `EMA9 vs EMA21: ${emaCross}.` : ''} Key support at ${formatPrice(matchedCue.stopLoss)}.`
-                                : matchedCue.direction === 'SELL'
-                                ? `Bearish pressure building. RSI${rsiVal !== null ? ` at ${rsiVal.toFixed(0)}` : ''} shows exhaustion. MACD ${!macdBullish ? 'bearish' : 'weakening'}. ${emaCross ? `EMA cross: ${emaCross}.` : ''} Target: ${formatPrice(matchedCue.target)}.`
-                                : `Consolidation phase. No clear directional bias. Watching ${formatPrice(matchedCue.target)} resistance and ${formatPrice(matchedCue.stopLoss)} support.`
-                              }
-                            </div>
-                          </div>
-                        </>
-                      ) : (
-                        <div className="text-center py-10">
-                          <div
-                            className="w-12 h-12 flex items-center justify-center mx-auto mb-3 rounded-full"
-                            style={{ background: '#162030' }}
-                          >
-                            <i className="ri-radar-line text-slate-500 text-xl" />
-                          </div>
-                          <div className="text-xs text-slate-500">No active signal</div>
-                          <div className="text-xs text-slate-600 mt-1">Cue Engine scanning…</div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* ── Levels tab (real indicator values) ── */}
-                  {activeTab === 'levels' && (
-                    <div className="p-4 space-y-4">
-
-                      {/* Real indicators */}
-                      <div>
-                        <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Live Indicators</div>
-                        <div className="space-y-0">
-                          {/* RSI */}
-                          <div className="flex items-center justify-between py-2.5 border-b" style={{ borderColor: '#1e2d42' }}>
-                            <div>
-                              <div className="text-xs text-slate-400">RSI (14)</div>
-                              <div className="text-xs text-slate-600">{rsiZone?.label ?? '—'}</div>
-                            </div>
-                            <span className={`text-xs font-mono font-bold ${rsiZone?.color ?? 'text-slate-500'}`}>
-                              {rsiVal !== null ? rsiVal.toFixed(1) : loading ? '…' : '—'}
-                            </span>
-                          </div>
-                          {/* MACD */}
-                          <div className="flex items-center justify-between py-2.5 border-b" style={{ borderColor: '#1e2d42' }}>
-                            <div>
-                              <div className="text-xs text-slate-400">MACD Hist.</div>
-                              <div className="text-xs text-slate-600">{indicators.macdHistogram !== null ? (macdBullish ? 'Bullish' : 'Bearish') : '—'}</div>
-                            </div>
-                            <span
-                              className="text-xs font-mono font-bold"
-                              style={{ color: indicators.macdHistogram !== null ? (macdBullish ? '#00D084' : '#FF4D4D') : '#475569' }}
-                            >
-                              {indicators.macdHistogram !== null
-                                ? (indicators.macdHistogram >= 0 ? '+' : '') + indicators.macdHistogram.toFixed(4)
-                                : loading ? '…' : '—'}
-                            </span>
-                          </div>
-                          {/* EMA cross */}
-                          <div className="flex items-center justify-between py-2.5 border-b" style={{ borderColor: '#1e2d42' }}>
-                            <div>
-                              <div className="text-xs text-slate-400">EMA 9 / 21</div>
-                              <div className="text-xs text-slate-600">{emaCross ?? '—'}</div>
-                            </div>
-                            <span
-                              className="text-xs font-mono font-bold"
-                              style={{ color: emaCross === 'Bullish' ? '#00D084' : emaCross === 'Bearish' ? '#FF4D4D' : '#475569' }}
-                            >
-                              {emaCross ?? (loading ? '…' : '—')}
-                            </span>
-                          </div>
-                          {/* ATR */}
-                          <div className="flex items-center justify-between py-2.5 border-b" style={{ borderColor: '#1e2d42' }}>
-                            <div>
-                              <div className="text-xs text-slate-400">ATR (14)</div>
-                              <div className="text-xs text-slate-600">Avg Range</div>
-                            </div>
-                            <span className="text-xs font-mono font-bold text-slate-400">
-                              {indicators.atr !== null ? formatPrice(indicators.atr) : loading ? '…' : '—'}
-                            </span>
-                          </div>
-                          {/* EMA9 value */}
-                          <div className="flex items-center justify-between py-2.5 border-b" style={{ borderColor: '#1e2d42' }}>
-                            <div>
-                              <div className="text-xs text-slate-400">EMA 9</div>
-                              <div className="text-xs text-slate-600">Fast MA</div>
-                            </div>
-                            <span className="text-xs font-mono font-bold text-slate-400">
-                              {indicators.ema9 !== null ? formatPrice(indicators.ema9) : loading ? '…' : '—'}
-                            </span>
-                          </div>
-                          {/* EMA21 value */}
-                          <div className="flex items-center justify-between py-2.5" >
-                            <div>
-                              <div className="text-xs text-slate-400">EMA 21</div>
-                              <div className="text-xs text-slate-600">Slow MA</div>
-                            </div>
-                            <span className="text-xs font-mono font-bold text-slate-400">
-                              {indicators.ema21 !== null ? formatPrice(indicators.ema21) : loading ? '…' : '—'}
-                            </span>
+                            <div className="text-xs font-semibold text-slate-300">Bollinger Bands</div>
+                            <div className="text-xs text-slate-600">Upgrade to Premium</div>
                           </div>
                         </div>
                       </div>
-
-                      {/* Bollinger (premium only) */}
-                      <div
-                        className="rounded-xl p-3 border flex items-center gap-3"
-                        style={{ background: 'rgba(245,158,11,0.04)', borderColor: 'rgba(245,158,11,0.15)' }}
-                      >
-                        <i className="ri-lock-2-line text-sm" style={{ color: '#F59E0B' }} />
-                        <div>
-                          <div className="text-xs font-semibold text-slate-300">Bollinger Bands</div>
-                          <div className="text-xs text-slate-600">Upgrade to Premium</div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
-              </div>
+              </>
             )}
           </div>
 
-          {/* ── Bottom indicator status bar ── */}
+          {/* ── Bottom indicator status bar — desktop only ── */}
           <div
-            className="flex-shrink-0 px-4 py-1.5 flex items-center gap-5 text-xs border-t overflow-x-auto"
+            className="hidden md:flex flex-shrink-0 px-4 py-1.5 items-center gap-5 text-xs border-t overflow-x-auto"
             style={{ background: '#0d1420', borderColor: '#1e2d42' }}
           >
             {rsiVal !== null && (
